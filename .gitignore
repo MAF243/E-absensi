@@ -1,0 +1,16 @@
+# AI Agent & Harness Folders (Impeccable, Gemini, Codex, etc.)
+.agents/
+.codex/
+.gemini/
+.impeccable/
+.kiro/
+
+# IDE & Editor folders
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
