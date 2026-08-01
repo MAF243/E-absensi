@@ -1,0 +1,9 @@
+/* Mengimpor Font Poppins dari Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+/* Memaksa seluruh aplikasi menggunakan font ini */
+body {
+    font-family: 'Poppins', sans-serif !important;
+    background-color: #f8fafc;
+    /* Warna latar belakang aplikasi yang lebih lembut */
+}
