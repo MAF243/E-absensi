@@ -399,6 +399,29 @@ ALTER TABLE `sesi_kuliah`
 --
 ALTER TABLE `users`
   ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`angkatan_id`) REFERENCES `angkatan` (`id`) ON DELETE SET NULL;
+
+--
+-- Table structure for table `grup_mahasiswa`
+--
+
+CREATE TABLE `grup_mahasiswa` (
+  `mahasiswa_id` int NOT NULL,
+  `angkatan_id` int NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Indexes for table `grup_mahasiswa`
+--
+ALTER TABLE `grup_mahasiswa`
+  ADD PRIMARY KEY (`mahasiswa_id`,`angkatan_id`),
+  ADD KEY `fk_grup_mahasiswa_angkatan` (`angkatan_id`);
+
+--
+-- Constraints for table `grup_mahasiswa`
+--
+ALTER TABLE `grup_mahasiswa`
+  ADD CONSTRAINT `fk_grup_mahasiswa_user` FOREIGN KEY (`mahasiswa_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_grup_mahasiswa_angkatan` FOREIGN KEY (`angkatan_id`) REFERENCES `angkatan` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
