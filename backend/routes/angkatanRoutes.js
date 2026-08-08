@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { verifyToken, verifyRole } = require('../middlewares/authMiddleware');
 const { 
   getAllAngkatan, 
   createAngkatan, 
@@ -8,6 +9,8 @@ const {
 } = require('../controllers/angkatanController');
 
 // Mendaftarkan rute API untuk Angkatan
+router.use(verifyToken, verifyRole('admin'));
+
 router.get('/', getAllAngkatan);            
 router.post('/', createAngkatan);           
 router.put('/:id', updateAngkatan);         

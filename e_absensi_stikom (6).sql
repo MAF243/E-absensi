@@ -86,6 +86,7 @@ CREATE TABLE `mata_kuliah` (
   `sks` int DEFAULT '2',
   `dosen_id` int DEFAULT NULL,
   `angkatan_id` int DEFAULT NULL,
+  `periode_id` int DEFAULT NULL,
   `jurusan` varchar(100) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `semester` enum('Ganjil','Genap') DEFAULT 'Ganjil',
@@ -103,6 +104,25 @@ INSERT INTO `mata_kuliah` (`id`, `kode_mk`, `nama_mk`, `jenis_kelas`, `sks`, `do
 (1, '-', 'Sistem Oprasi Jaringan', 'paket', 2, 2, 1, 'INFORMATIKA', '2026-07-12 07:04:01', 'Ganjil', 'Rabu', '17:18:00', '17:19:00', 16),
 (2, 'TIF101', 'Algoritma Pemrograman', 'paket', 3, 60, 4, 'INFORMATIKA', '2026-07-12 07:34:16', 'Genap', 'Rabu', '18:46:00', '18:48:00', 16),
 (3, 'ADM202', 'Pengantar Bisnis', 'kelompok', 2, 60, NULL, 'ITK', '2026-07-12 07:34:16', 'Genap', 'Kamis', '23:11:00', '23:12:00', 16);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `periode_akademik`
+--
+
+CREATE TABLE `periode_akademik` (
+  `id` int NOT NULL,
+  `nama_periode` varchar(50) NOT NULL,
+  `is_active` tinyint(1) DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `periode_akademik`
+--
+
+INSERT INTO `periode_akademik` (`id`, `nama_periode`, `is_active`) VALUES
+(1, 'Ganjil 2026/2027', 1);
 
 -- --------------------------------------------------------
 
@@ -160,7 +180,7 @@ CREATE TABLE `sesi_kuliah` (
   `dosen_id` int DEFAULT NULL,
   `tipe` enum('offline','online') DEFAULT 'offline',
   `link_meet` varchar(255) DEFAULT NULL,
-  `status` enum('berlangsung','selesai') DEFAULT 'berlangsung',
+  `status` enum('berlangsung','selesai','dibatalkan') DEFAULT 'berlangsung',
   `waktu_mulai` datetime DEFAULT CURRENT_TIMESTAMP,
   `waktu_selesai` datetime DEFAULT NULL,
   `agenda` text,
@@ -188,7 +208,7 @@ CREATE TABLE `users` (
   `inisial` varchar(10) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `role` enum('admin','dosen','mahasiswa') NOT NULL,
-  `status_akademik` enum('aktif','cuti','tidak aktif') DEFAULT 'aktif',
+  `status_akademik` enum('aktif','cuti','lulus','keluar','resign','tidak aktif') DEFAULT 'aktif',
   `jenis_kelamin` enum('L','P') DEFAULT NULL,
   `jurusan` varchar(100) DEFAULT NULL,
   `angkatan_id` int DEFAULT NULL,
@@ -285,7 +305,14 @@ ALTER TABLE `mata_kuliah`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `kode_mk` (`kode_mk`),
   ADD KEY `dosen_id` (`dosen_id`),
-  ADD KEY `angkatan_id` (`angkatan_id`);
+  ADD KEY `angkatan_id` (`angkatan_id`),
+  ADD KEY `periode_id` (`periode_id`);
+
+--
+-- Indexes for table `periode_akademik`
+--
+ALTER TABLE `periode_akademik`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `peserta_kelas`
@@ -339,6 +366,12 @@ ALTER TABLE `mata_kuliah`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
+-- AUTO_INCREMENT for table `periode_akademik`
+--
+ALTER TABLE `periode_akademik`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `peserta_kelas`
 --
 ALTER TABLE `peserta_kelas`
@@ -364,35 +397,36 @@ ALTER TABLE `users`
 -- Constraints for table `absensi`
 --
 ALTER TABLE `absensi`
-  ADD CONSTRAINT `absensi_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `absensi_ibfk_2` FOREIGN KEY (`mk_id`) REFERENCES `mata_kuliah` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `absensi_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  ADD CONSTRAINT `absensi_ibfk_2` FOREIGN KEY (`mk_id`) REFERENCES `mata_kuliah` (`id`) ON DELETE RESTRICT;
 
 --
 -- Constraints for table `kehadiran`
 --
 ALTER TABLE `kehadiran`
-  ADD CONSTRAINT `kehadiran_ibfk_1` FOREIGN KEY (`mahasiswa_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `kehadiran_ibfk_2` FOREIGN KEY (`sesi_id`) REFERENCES `sesi_kuliah` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `kehadiran_ibfk_1` FOREIGN KEY (`mahasiswa_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  ADD CONSTRAINT `kehadiran_ibfk_2` FOREIGN KEY (`sesi_id`) REFERENCES `sesi_kuliah` (`id`) ON DELETE RESTRICT;
 
 --
 -- Constraints for table `mata_kuliah`
 --
 ALTER TABLE `mata_kuliah`
   ADD CONSTRAINT `mata_kuliah_ibfk_1` FOREIGN KEY (`dosen_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `mata_kuliah_ibfk_2` FOREIGN KEY (`angkatan_id`) REFERENCES `angkatan` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `mata_kuliah_ibfk_2` FOREIGN KEY (`angkatan_id`) REFERENCES `angkatan` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `mata_kuliah_ibfk_3` FOREIGN KEY (`periode_id`) REFERENCES `periode_akademik` (`id`) ON DELETE RESTRICT;
 
 --
 -- Constraints for table `peserta_kelas`
 --
 ALTER TABLE `peserta_kelas`
-  ADD CONSTRAINT `peserta_kelas_ibfk_1` FOREIGN KEY (`mk_id`) REFERENCES `mata_kuliah` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `peserta_kelas_ibfk_2` FOREIGN KEY (`mahasiswa_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `peserta_kelas_ibfk_1` FOREIGN KEY (`mk_id`) REFERENCES `mata_kuliah` (`id`) ON DELETE RESTRICT,
+  ADD CONSTRAINT `peserta_kelas_ibfk_2` FOREIGN KEY (`mahasiswa_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT;
 
 --
 -- Constraints for table `sesi_kuliah`
 --
 ALTER TABLE `sesi_kuliah`
-  ADD CONSTRAINT `sesi_kuliah_ibfk_1` FOREIGN KEY (`mk_id`) REFERENCES `mata_kuliah` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `sesi_kuliah_ibfk_1` FOREIGN KEY (`mk_id`) REFERENCES `mata_kuliah` (`id`) ON DELETE RESTRICT;
 
 --
 -- Constraints for table `users`

@@ -1,16 +1,21 @@
 const express = require('express');
 const router = express.Router();
+const { verifyToken, verifyRole } = require('../middlewares/authMiddleware');
 const { 
   getAllMahasiswa, getMahasiswaById, createMahasiswa, updateMahasiswa, deleteMahasiswa, 
-  bulkCreateMahasiswa, bulkAssignAngkatan, bulkDeleteMahasiswa, bulkEditJurusan, removeGroup
+  bulkCreateMahasiswa, bulkAssignAngkatan, bulkAssignKelas, bulkDeleteMahasiswa, bulkEditJurusan, removeAngkatan, removeKelas
 } = require('../controllers/mahasiswaController');
+
+router.use(verifyToken, verifyRole('admin'));
 
 router.get('/', getAllMahasiswa);               
 router.post('/', createMahasiswa);              
 router.post('/bulk', bulkCreateMahasiswa);      
-router.put('/bulk-assign', bulkAssignAngkatan); 
+router.put('/bulk-assign-angkatan', bulkAssignAngkatan); 
+router.put('/bulk-assign-kelas', bulkAssignKelas);
 
-router.post('/remove-group', removeGroup); // Rute Hapus Grup
+router.post('/remove-angkatan', removeAngkatan);
+router.post('/remove-kelas', removeKelas);
 
 router.delete('/bulk-delete', bulkDeleteMahasiswa); 
 router.put('/bulk-edit-jurusan', bulkEditJurusan);  

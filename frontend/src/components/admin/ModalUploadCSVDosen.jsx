@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, UploadCloud, Download, CheckCircle2, AlertCircle, FileText, Info } from 'lucide-react';
+import axiosClient from '../../utils/axiosClient';
 
 const ModalUploadCSVDosen = ({ isOpen, onClose, onSuccess }) => {
   const [csvData, setCsvData] = useState([]);
@@ -9,8 +10,6 @@ const ModalUploadCSVDosen = ({ isOpen, onClose, onSuccess }) => {
   const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
-
-  const BASE_URL = 'http://localhost:5000';
 
   const downloadTemplate = () => {
     const headers = "nidn;nama;jk;status;password\n";
@@ -76,9 +75,7 @@ const ModalUploadCSVDosen = ({ isOpen, onClose, onSuccess }) => {
   const handleUploadSubmit = async () => {
     setIsLoading(true); setErrorMsg('');
     try {
-      const res = await fetch(`${BASE_URL}/api/dosen/bulk`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: csvData }) 
-      }).then(r => r.json());
+      const res = await axiosClient.post(`/dosen/bulk`, { data: csvData }).then(r => r.data);
 
       if (res.success) {
         resetFile(); onSuccess(); onClose();
@@ -91,14 +88,14 @@ const ModalUploadCSVDosen = ({ isOpen, onClose, onSuccess }) => {
   const resetFile = () => { setCsvData([]); setFileName(''); setErrorMsg(''); };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
-      <div className="bg-white w-full max-w-3xl rounded-2xl p-6 md:p-8 shadow-2xl relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-white w-full max-w-3xl rounded-[32px] p-6 md:p-8 shadow-2xl relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
           <div>
             <h3 className="text-xl font-bold text-slate-800">Import Massal Dosen (CSV)</h3>
             <p className="text-slate-500 font-medium text-sm mt-1">Tambahkan banyak data dosen sekaligus.</p>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"><X size={20} /></button>
+          <button onClick={onClose} className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
         </div>
 
         {errorMsg && (
@@ -113,7 +110,7 @@ const ModalUploadCSVDosen = ({ isOpen, onClose, onSuccess }) => {
                 <li className="pl-6">
                   <span className="absolute flex items-center justify-center w-6 h-6 bg-blue-100 rounded-full -left-3 text-blue-600 font-bold text-xs">1</span>
                   <h5 className="font-semibold text-slate-800 text-sm">Unduh Template</h5>
-                  <button onClick={downloadTemplate} className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold hover:bg-slate-50"><Download size={16} /> Unduh Template CSV</button>
+                  <button onClick={downloadTemplate} className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm"><Download size={16} /> Unduh Template CSV</button>
                 </li>
                 <li className="pl-6">
                   <span className="absolute flex items-center justify-center w-6 h-6 bg-slate-100 rounded-full -left-3 text-slate-600 font-bold text-xs">2</span>
@@ -134,15 +131,15 @@ const ModalUploadCSVDosen = ({ isOpen, onClose, onSuccess }) => {
             <div className="flex justify-between items-end mb-4 border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FileText size={24} /></div>
-                <div><p className="text-xs font-semibold text-slate-500 uppercase">File Terpilih</p><p className="font-bold text-slate-800 text-sm">{fileName}</p></div>
+                <div><p className="text-xs font-bold text-slate-500 uppercase tracking-wider">File Terpilih</p><p className="font-bold text-slate-800 text-sm">{fileName}</p></div>
               </div>
-              <div className="text-right"><p className="text-xs font-semibold text-slate-500 uppercase">Total</p><p className="font-bold text-blue-600 text-sm">{csvData.length} Data</p></div>
+              <div className="text-right"><p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total</p><p className="font-bold text-blue-600 text-sm">{csvData.length} Data</p></div>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-6">
-              <table className="w-full text-left text-sm whitespace-nowrap">
+              <table className="w-full text-left text-sm table-auto">
                 <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr><th className="px-4 py-3 text-slate-600">NIDN</th><th className="px-4 py-3 text-slate-600">Nama Lengkap</th></tr>
+                  <tr><th className="px-4 py-3 font-bold text-slate-600 text-xs uppercase tracking-wider">NIDN</th><th className="px-4 py-3 font-bold text-slate-600 text-xs uppercase tracking-wider">Nama Lengkap</th></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {csvData.slice(0, 5).map((row, idx) => (
@@ -153,8 +150,8 @@ const ModalUploadCSVDosen = ({ isOpen, onClose, onSuccess }) => {
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button onClick={resetFile} className="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 w-full sm:w-auto">Batal</button>
-              <button onClick={handleUploadSubmit} disabled={isLoading} className="flex-1 bg-blue-600 text-white py-2.5 px-6 rounded-xl font-semibold hover:bg-blue-700 flex justify-center gap-2">
+              <button onClick={resetFile} className="px-6 py-3.5 bg-white border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-colors w-full sm:w-auto">Batal</button>
+              <button onClick={handleUploadSubmit} disabled={isLoading} className="flex-1 bg-blue-600 text-white py-3.5 px-6 rounded-xl font-semibold hover:bg-blue-700 flex justify-center gap-2 shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all">
                 {isLoading ? 'Memproses...' : <><CheckCircle2 size={18} /> Simpan Data</>}
               </button>
             </div>
