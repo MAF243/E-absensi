@@ -305,4 +305,5 @@ configuration.local.*
 .impeccable/
 .kiro/
 .scratch/
+.github/
 scratch/
