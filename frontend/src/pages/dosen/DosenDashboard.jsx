@@ -76,8 +76,8 @@ const DosenDashboard = () => {
     e.preventDefault();
     if (!agenda.trim()) return showToast("Agenda materi wajib diisi!", "error");
     try {
-      const res = await axiosClient.post('/jadwal/buka-sesi', {
-        mk_id: selectedClass.id, dosen_id: currentUser.id, tipe: tipeSesi, link_meet: linkPertemuan, agenda, jenis_sesi: jenisSesi, bobot: bobotSesi
+      const res = await axiosClient.post(`/jadwal/${selectedClass.id}/sesi`, {
+        dosen_id: currentUser.id, tipe: tipeSesi, link_meet: linkPertemuan, agenda, jenis_sesi: jenisSesi, bobot: bobotSesi
       }).then(r => r.data);
       if (res.success) { setModalOpen(false); showToast("Sesi perkuliahan dibuka!", "success"); fetchJadwalDosen(); } else showToast(res.message, "error");
     } catch (err) { showToast("Terjadi kesalahan jaringan.", "error"); }
@@ -89,7 +89,7 @@ const DosenDashboard = () => {
     if (!isConfirmed) return;
     
     try {
-      const res = await axiosClient.put(`/jadwal/tutup-sesi/${sesi_id}`).then(r => r.data);
+      const res = await axiosClient.patch(`/jadwal/sesi/${sesi_id}/status`).then(r => r.data);
       if (res.success) { showToast("Sesi ditutup.", "success"); fetchJadwalDosen(); }
     } catch (err) { showToast("Gagal menutup sesi.", "error"); }
   };

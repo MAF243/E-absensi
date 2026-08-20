@@ -11,8 +11,8 @@ router.get('/mahasiswa/:mahasiswa_id', verifyRole('mahasiswa'), getJadwalByMahas
 
 router.put('/:id', verifyRole('admin'), updateJadwal);
 router.put('/reset/:id', verifyRole('admin'), resetJadwal);
-router.post('/buka-sesi', verifyRole('dosen', 'admin'), bukaSesi);
-router.put('/tutup-sesi/:sesi_id', verifyRole('dosen', 'admin'), tutupSesi);
-router.delete('/batalkan-sesi/:sesi_id', verifyRole('admin'), batalkanSesi);
+router.post('/:id/sesi', verifyRole('dosen', 'admin'), bukaSesi);
+router.patch('/sesi/:sesi_id/status', verifyRole('dosen', 'admin'), tutupSesi);
+router.delete('/sesi/:sesi_id', verifyRole('admin'), batalkanSesi);
 
 module.exports = router;

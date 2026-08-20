@@ -19,7 +19,7 @@ const resetJadwal = async (req, res, next) => {
 };
 
 const bukaSesi = async (req, res, next) => {
-  await jadwalService.bukaSesi(req.body);
+  await jadwalService.bukaSesi({ mk_id: req.params.id, ...req.body });
   res.json({ success: true, message: "Sesi kelas berhasil DIBUKA!" });
 };
 

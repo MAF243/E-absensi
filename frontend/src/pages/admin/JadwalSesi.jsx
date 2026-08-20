@@ -233,7 +233,7 @@ const JadwalSesi = () => {
 
   const handleBukaSesiSubmit = async (mk_id, dosen_id, tipe, link_meet, agenda, jenis_sesi, bobot) => {
     try {
-      const res = await axiosClient.post(`/jadwal/buka-sesi`, { mk_id, dosen_id, tipe, link_meet, agenda, jenis_sesi, bobot }).then(r => r.data);
+      const res = await axiosClient.post(`/jadwal/${mk_id}/sesi`, { dosen_id, tipe, link_meet, agenda, jenis_sesi, bobot }).then(r => r.data);
       if (res.success) { showToast(res.message, "success"); setModalBuka({ isOpen: false }); fetchJadwal(); }
       else showToast(res.message, "error");
     } catch (err) { }
@@ -243,7 +243,7 @@ const JadwalSesi = () => {
     const isConfirmed = await showConfirm({ title: "Tutup Sesi Kelas", message: `Tutup paksa sesi kelas untuk mata kuliah ${matkul_nama} sekarang?`, type: "warning", confirmText: "Tutup Paksa" });
     if (!isConfirmed) return;
     try {
-      const res = await axiosClient.put(`/jadwal/tutup-sesi/${sesi_id}`).then(r => r.data);
+      const res = await axiosClient.patch(`/jadwal/sesi/${sesi_id}/status`).then(r => r.data);
       if (res.success) { showToast(res.message, "success"); fetchJadwal(); }
     } catch (err) { }
   };
