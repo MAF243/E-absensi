@@ -1,14 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const { getJadwal, updateJadwal, resetJadwal, bukaSesi, tutupSesi, getJadwalByMahasiswa } = require('../controllers/jadwalController');
+const { verifyToken, verifyRole } = require('../middlewares/authMiddleware');
+const { getJadwal, updateJadwal, resetJadwal, bukaSesi, tutupSesi, batalkanSesi, getJadwalByMahasiswa } = require('../controllers/jadwalController');
 
-router.get('/', getJadwal);
+router.use(verifyToken);
+
+router.get('/', verifyRole('admin', 'dosen'), getJadwal);
 // RUTE BARU UNTUK MAHASISWA
-router.get('/mahasiswa/:mahasiswa_id', getJadwalByMahasiswa);
+router.get('/mahasiswa/:mahasiswa_id', verifyRole('mahasiswa'), getJadwalByMahasiswa);
 
-router.put('/:id', updateJadwal);
-router.put('/reset/:id', resetJadwal);
-router.post('/buka-sesi', bukaSesi);
-router.put('/tutup-sesi/:sesi_id', tutupSesi);
+router.put('/:id', verifyRole('admin'), updateJadwal);
+router.put('/reset/:id', verifyRole('admin'), resetJadwal);
+router.post('/:id/sesi', verifyRole('dosen', 'admin'), bukaSesi);
+router.patch('/sesi/:sesi_id/status', verifyRole('dosen', 'admin'), tutupSesi);
+router.delete('/sesi/:sesi_id', verifyRole('admin'), batalkanSesi);
 
 module.exports = router;

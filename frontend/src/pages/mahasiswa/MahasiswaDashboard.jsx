@@ -1,23 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, CheckCircle2, LogOut, User, CalendarDays, QrCode } from 'lucide-react';
-import { apiUrl } from '../../config/api';
-import { clearSession, getCurrentUser } from '../../utils/session';
+import axiosClient from '../../utils/axiosClient';
+import useAuthStore from '../../store/useAuthStore';
+import useUiStore from '../../store/useUiStore';
 import JadwalMahasiswaCard from '../../components/mahasiswa/JadwalMahasiswaCard';
 import QrScannerModal from '../../components/mahasiswa/QrScannerModal';
 
 const MahasiswaDashboard = () => {
   const navigate = useNavigate();
   
-  // STATE USER DINAMIS DARI LOGIN
-  const [currentUser, setCurrentUser] = useState(null);
+  // STATE USER DARI ZUSTAND
+  const currentUser = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const { showConfirm, showToast } = useUiStore();
   
   // STATE JADWAL & ABSENSI
   const [jadwalHariIni, setJadwalHariIni] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // STATE UI & SCANNER
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [isScanning, setIsScanning] = useState(false);
   const [isLoadingGPS, setIsLoadingGPS] = useState(false);
   const [gpsLocation, setGpsLocation] = useState(null);
@@ -28,20 +30,12 @@ const MahasiswaDashboard = () => {
   const todayName = days[now.getDay()];
   const todayDateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  const showToast = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
-  };
-
   // INIT: CEK LOGIN
   useEffect(() => {
-    const user = getCurrentUser();
-    if (!user) {
+    if (!currentUser) {
       navigate('/');
-      return;
     }
-    setCurrentUser(user);
-  }, [navigate]);
+  }, [currentUser, navigate]);
 
   // FETCH DATA MENGGUNAKAN API BARU
   useEffect(() => {
@@ -55,7 +49,7 @@ const MahasiswaDashboard = () => {
   async function fetchJadwalMahasiswa() {
     try {
       // Menggunakan Endpoint Spesifik Mahasiswa
-      const res = await fetch(apiUrl(`/api/jadwal/mahasiswa/${currentUser.id}`)).then(r => r.json());
+      const res = await axiosClient.get(`/jadwal/mahasiswa/${currentUser.id}`).then(r => r.data);
       
       if (res.success && res.data) {
         // Filter: Hanya tampilkan jadwal HARI INI
@@ -100,18 +94,12 @@ const MahasiswaDashboard = () => {
     if (text) {
       setIsScanning(false); 
       try {
-        const response = await fetch(apiUrl('/api/absensi/scan'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            qr_code: text, 
-            latitude: gpsLocation.lat, 
-            longitude: gpsLocation.lng, 
-            mahasiswa_id: currentUser.id 
-          })
-        });
-        
-        const resData = await response.json();
+        const resData = await axiosClient.post('/absensi/scan', {
+          qr_code: text, 
+          latitude: gpsLocation.lat, 
+          longitude: gpsLocation.lng, 
+          mahasiswa_id: currentUser.id 
+        }).then(r => r.data);
         
         if (resData.success) {
           showToast(resData.message, "success");
@@ -140,83 +128,95 @@ const MahasiswaDashboard = () => {
     }, 1500);
   };
 
-  const handleLogout = () => {
-    if (window.confirm("Yakin ingin keluar?")) {
-      clearSession();
+  const handleLogout = async () => {
+    const isConfirmed = await showConfirm({
+      title: 'Keluar dari Sistem',
+      message: 'Apakah Anda yakin ingin keluar? Sesi Anda akan berakhir.',
+      type: 'danger',
+      confirmText: 'Ya, Keluar'
+    });
+
+    if (isConfirmed) {
+      logout();
       navigate('/');
     }
   };
 
-  if (!currentUser) return <div className="flex h-screen items-center justify-center text-slate-500 font-bold">Memuat data...</div>;
+  if (!currentUser) return <div className="flex h-screen items-center justify-center text-slate-400 text-sm font-black uppercase tracking-widest animate-pulse">Memuat data...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-20">
+    <div className="min-h-screen bg-slate-50 font-sans pb-20 overflow-x-hidden">
       
-      {/* Notifikasi Toast */}
-      {toast.show && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[9999] animate-in slide-in-from-top-6 duration-300">
-          <div className={`flex items-start gap-3 px-4 py-4 rounded-2xl shadow-xl border bg-white ${toast.type === 'success' ? 'border-emerald-100' : 'border-rose-100'}`}>
-            <div className={`p-2 rounded-xl shrink-0 ${toast.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-              {toast.type === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
-            </div>
-            <div className="flex flex-col pr-2">
-              <span className="text-sm font-bold text-slate-800 tracking-tight">{toast.type === 'success' ? 'Berhasil' : 'Gagal / Peringatan'}</span>
-              <span className="text-[11px] font-medium text-slate-500 leading-relaxed mt-0.5">{toast.message}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* HEADER PROFIL NATIVE-LIKE */}
-      <div className="bg-blue-600 text-white pt-10 pb-16 px-6 rounded-b-[40px] shadow-lg relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-800/30 rounded-full blur-2xl translate-y-1/3 -translate-x-1/3"></div>
+      <div className="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-white pt-12 pb-24 px-6 md:px-10 rounded-b-[48px] shadow-2xl shadow-blue-900/20 relative overflow-hidden animate-in slide-in-from-top-full duration-700 ease-out">
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400/20 rounded-full blur-[80px] -translate-y-1/3 translate-x-1/4 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-indigo-500/30 rounded-full blur-[60px] translate-y-1/4 -translate-x-1/4 pointer-events-none"></div>
+        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-emerald-400/20 rounded-full blur-[40px] pointer-events-none"></div>
 
-        <div className="flex justify-between items-center mb-6 relative z-10">
-          <div>
-            <h1 className="text-xl font-black tracking-tight flex items-center gap-1.5"><QrCode size={20}/> E-Absensi</h1>
-            <p className="text-blue-200 text-[10px] font-bold uppercase tracking-widest mt-0.5">Portal Mahasiswa</p>
+        <div className="flex justify-between items-center mb-10 relative z-10 max-w-4xl mx-auto">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/20 shadow-inner">
+               <QrCode size={24} strokeWidth={2.5} className="text-white"/>
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight drop-shadow-sm">E-Absensi</h1>
+              <p className="text-blue-200 text-[10px] font-black uppercase tracking-widest mt-0.5">Portal Mahasiswa</p>
+            </div>
           </div>
-          <button onClick={handleLogout} className="p-2 bg-blue-700/50 hover:bg-rose-500 rounded-full transition-colors backdrop-blur-sm border border-white/10 shadow-sm">
-            <LogOut size={18} />
+          <button onClick={handleLogout} className="p-3.5 bg-white/10 hover:bg-rose-500 rounded-2xl transition-all active:scale-95 backdrop-blur-md border border-white/20 shadow-sm shadow-black/10 group">
+            <LogOut size={20} strokeWidth={2.5} className="text-white group-hover:text-white" />
           </button>
         </div>
 
-        <div className="flex items-center gap-4 relative z-10">
-          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner">
-            <User size={26} className="text-white drop-shadow-sm" />
+        <div className="flex items-center gap-5 md:gap-6 relative z-10 max-w-4xl mx-auto">
+          <div className="w-20 h-20 bg-white/10 rounded-[24px] flex items-center justify-center backdrop-blur-md border border-white/20 shadow-inner shrink-0 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none"></div>
+            <User size={36} className="text-white drop-shadow-md relative z-10" strokeWidth={2.5} />
           </div>
-          <div>
-            <h2 className="text-lg font-bold leading-tight shadow-sm">{currentUser.nama_lengkap}</h2>
-            <p className="text-blue-100 text-xs font-semibold mt-1 bg-black/10 px-2 py-0.5 rounded w-fit">{currentUser.nomor_induk} • {currentUser.jurusan || 'MHS'}</p>
+          <div className="flex-1 pt-1">
+            <h2 className="text-2xl md:text-3xl font-black leading-tight drop-shadow-md tracking-tight mb-2 line-clamp-1">{currentUser.nama_lengkap}</h2>
+            <div className="flex flex-wrap gap-2">
+              <span className="bg-black/20 text-white text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-[12px] backdrop-blur-md border border-white/10 shadow-sm">
+                {currentUser.nomor_induk}
+              </span>
+              <span className="bg-blue-500/30 text-white text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-[12px] backdrop-blur-md border border-blue-400/30 shadow-sm">
+                {currentUser.jurusan || 'MHS'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* KONTEN UTAMA - JADWAL HARI INI */}
-      <div className="px-5 -mt-8 relative z-20 max-w-2xl mx-auto">
-        <div className="bg-white rounded-3xl p-5 md:p-6 shadow-xl shadow-slate-200/50 border border-slate-100">
+      <div className="px-5 md:px-10 -mt-12 relative z-20 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both">
+        <div className="bg-white rounded-[40px] p-6 md:p-8 shadow-2xl shadow-slate-200/50 border border-slate-100">
           
-          <div className="flex items-center justify-between mb-5 border-b border-slate-50 pb-4">
-            <div>
-              <h3 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
-                <CalendarDays size={18} className="text-blue-600" /> Jadwal Hari Ini
-              </h3>
-              <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{todayDateStr}</p>
+          <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3.5 bg-blue-50 text-blue-600 rounded-[20px] shadow-sm border border-blue-100">
+                <CalendarDays size={24} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Jadwal Hari Ini</h3>
+                <p className="text-[11px] font-black text-slate-400 mt-1 uppercase tracking-widest">{todayDateStr}</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs font-bold text-indigo-600">{jadwalHariIni.length} Kelas</p>
+            <div className="bg-slate-50 px-4 py-2.5 rounded-[16px] border border-slate-200/60 hidden sm:block">
+              <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">{jadwalHariIni.length} Kelas Tersedia</p>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             {isLoading ? (
-               <div className="text-center py-10 text-slate-400 text-sm font-semibold animate-pulse">Memuat jadwal...</div>
+               <div className="text-center py-16 text-slate-400 text-xs font-black uppercase tracking-widest animate-pulse bg-slate-50 rounded-[32px] border border-slate-100">Memuat jadwal kelas...</div>
             ) : jadwalHariIni.length === 0 ? (
-               <div className="text-center py-10 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50">
-                 <CalendarDays size={40} className="mx-auto text-slate-300 mb-3"/>
-                 <p className="text-sm font-bold text-slate-600">Belum ada matakuliah hari ini.</p>
-                 <p className="text-[11px] text-slate-400 mt-1">Gunakan waktu ini untuk istirahat atau belajar mandiri.</p>
+               <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-[32px] bg-slate-50 transition-all hover:bg-slate-100/50 group">
+                 <div className="w-24 h-24 bg-white rounded-[24px] shadow-sm flex items-center justify-center mx-auto mb-6 group-hover:-translate-y-1 transition-transform">
+                   <CalendarDays size={40} className="text-slate-300" strokeWidth={2} />
+                 </div>
+                 <p className="text-xl font-black text-slate-800 tracking-tight">Tidak Ada Kelas Hari Ini</p>
+                 <p className="text-sm font-bold text-slate-500 mt-2 max-w-sm mx-auto leading-relaxed">Gunakan waktu luang ini untuk beristirahat, mengerjakan tugas kelompok, atau belajar mandiri.</p>
                </div>
             ) : (
                jadwalHariIni.map((jadwal) => (

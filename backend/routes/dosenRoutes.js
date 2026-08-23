@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { verifyToken, verifyRole } = require('../middlewares/authMiddleware');
 const { 
   getAllDosen, 
   createDosen, 
@@ -12,13 +13,15 @@ const {
 } = require('../controllers/dosenController');
 
 // Mendaftarkan rute API untuk Dosen
-router.get('/', getAllDosen);            
-router.get('/:id/detail', getDosenDetail);      
-router.post('/', createDosen);           
-router.post('/bulk', bulkCreateDosen);          
-router.delete('/bulk-delete', bulkDeleteDosen); 
-router.put('/:id', updateDosen);         
-router.delete('/:id', deleteDosen);      
-router.delete('/:id/reset-sesi', resetRiwayatSesi); // <-- Rute eksekusi tombol reset
+router.use(verifyToken); // Semua harus login
+
+router.get('/', verifyRole('admin'), getAllDosen);            
+router.get('/:id/detail', verifyRole('admin'), getDosenDetail);      
+router.post('/', verifyRole('admin'), createDosen);           
+router.post('/bulk', verifyRole('admin'), bulkCreateDosen);          
+router.delete('/bulk-delete', verifyRole('admin'), bulkDeleteDosen); 
+router.put('/:id', verifyRole('admin', 'dosen'), updateDosen);         
+router.delete('/:id', verifyRole('admin'), deleteDosen);      
+router.delete('/:id/reset-sesi', verifyRole('admin'), resetRiwayatSesi); 
 
 module.exports = router;

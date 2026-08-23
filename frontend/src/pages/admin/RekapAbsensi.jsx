@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Calendar, Filter, Users, BookOpen, CheckCircle2, AlertCircle, FileSpreadsheet, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Download, Calendar, Filter, Users, BookOpen, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import axiosClient from '../../utils/axiosClient';
+import useUiStore from '../../store/useUiStore';
+import DataTable from '../../components/common/DataTable';
 
 const RekapAbsensi = () => {
   const [activeTab, setActiveTab] = useState('mahasiswa');
@@ -17,21 +20,11 @@ const RekapAbsensi = () => {
   const [dataMhs, setDataMhs] = useState([]);
   const [dataDosen, setDataDosen] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  // State Pagination Preview (Baru)
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 25; // Maksimal 25 data per halaman
-
-  const BASE_URL = 'http://localhost:5000';
-
-  const showToast = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
-  };
+  const { showToast } = useUiStore();
 
   useEffect(() => {
-    fetch(`${BASE_URL}/api/angkatan`).then(r => r.json()).then(res => { if(res.success) setAngkatanList(res.data); }).catch(()=>({}));
+    axiosClient.get(`/angkatan`).then(r => r.data).then(res => { if(res.success) setAngkatanList(res.data); }).catch(()=>({}));
     // Set default date: 1 bulan terakhir
     const date = new Date();
     const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
@@ -42,14 +35,13 @@ const RekapAbsensi = () => {
 
   const tarikData = async () => {
     setIsLoading(true);
-    setCurrentPage(1); // Reset halaman ke 1 setiap kali menarik data baru
     
     try {
       if (activeTab === 'mahasiswa') {
         const queryParams = new URLSearchParams({
           angkatan_id: filterAngkatan, jurusan: filterJurusan, start_date: startDate, end_date: endDate
         }).toString();
-        const res = await fetch(`${BASE_URL}/api/rekap/mahasiswa?${queryParams}`).then(r => r.json());
+        const res = await axiosClient.get(`/rekap/mahasiswa?${queryParams}`).then(r => r.data);
         
         if (res.success) { 
           if (res.data.length > 0) {
@@ -62,7 +54,7 @@ const RekapAbsensi = () => {
         }
       } else {
         const queryParams = new URLSearchParams({ start_date: startDate, end_date: endDate }).toString();
-        const res = await fetch(`${BASE_URL}/api/rekap/dosen?${queryParams}`).then(r => r.json());
+        const res = await axiosClient.get(`/rekap/dosen?${queryParams}`).then(r => r.data);
         
         if (res.success) { 
           if (res.data.length > 0) {
@@ -216,197 +208,140 @@ const RekapAbsensi = () => {
     saveAs(new Blob([buffer]), `Rekap_Dosen_${startDate}_sd_${endDate}.xlsx`);
   };
 
-  // LOGIKA PAGINATION UNTUK PREVIEW
   const currentList = activeTab === 'mahasiswa' ? dataMhs : dataDosen;
-  const totalPages = Math.ceil(currentList.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedData = currentList.slice(startIndex, endIndex);
+  const currentListWithIndex = currentList.map((item, index) => ({ ...item, absolute_index: index + 1 }));
+
+  const columnsMhs = [
+    { header: 'No', accessor: 'absolute_index', className: 'text-center', tdClassName: 'text-center text-slate-400 font-bold w-12 border-r border-slate-100/60' },
+    { header: 'NIM', accessor: 'nomor_induk', tdClassName: 'font-black tracking-widest text-slate-500 text-xs' },
+    { header: 'Nama Mahasiswa', accessor: 'nama_lengkap', tdClassName: 'font-bold text-slate-800' },
+    { header: 'Jurusan', accessor: 'jurusan', className: 'text-center', tdClassName: 'text-center font-black uppercase tracking-widest text-blue-600', render: (row) => row.jurusan || '-' },
+    { header: 'AKM%', accessor: 'akm', className: 'text-center text-blue-600', tdClassName: 'text-center font-black text-blue-600', render: (row) => `${row.akm}%` }
+  ];
+
+  const columnsDosen = [
+    { header: 'No', accessor: 'absolute_index', className: 'text-center', tdClassName: 'text-center text-slate-400 font-bold w-12 border-r border-slate-100/60' },
+    { header: 'Nama Dosen', accessor: 'nama_dosen', tdClassName: 'font-bold text-slate-800' },
+    { header: 'Mata Kuliah', accessor: 'nama_mk', tdClassName: 'font-bold text-slate-600' },
+    { header: 'Tanggal', accessor: 'tanggal', className: 'text-center', tdClassName: 'text-center font-black tracking-widest text-slate-500 text-[11px] md:text-xs' },
+    { header: 'Agenda Materi', accessor: 'agenda', tdClassName: 'truncate max-w-[200px] text-slate-600' }
+  ];
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 bg-slate-50 min-h-screen font-sans animate-in fade-in duration-500 pb-10">
+    <div className="p-4 md:p-6 lg:p-8 min-h-screen font-sans animate-in fade-in duration-500 relative pb-10">
       
-      {/* Toast Notification */}
-      {toast.show && (
-        <div className="fixed top-4 right-4 md:top-8 md:right-8 z-[9999] animate-in slide-in-from-top-4 duration-300">
-          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border bg-white ${toast.type === 'success' ? 'border-emerald-100' : 'border-rose-100'}`}>
-            <div className={`p-2 rounded-xl shrink-0 ${toast.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-              {toast.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-            </div>
-            <span className="text-sm font-bold text-slate-800">{toast.message}</span>
-          </div>
-        </div>
-      )}
-
       {/* HEADER */}
-      <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-indigo-600 text-white rounded-xl shadow-md"><FileSpreadsheet size={24} /></div>
+      <div className="mb-8 md:mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="p-3.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-[20px] shadow-sm shrink-0">
+            <FileSpreadsheet size={28} strokeWidth={2.5} />
+          </div>
           <div>
-            <h2 className="text-xl md:text-2xl font-bold text-slate-800">Laporan & Rekap Absensi</h2>
-            <p className="text-xs md:text-sm text-slate-500">Cetak rekapitulasi kehadiran dinamis sesuai permintaan atasan.</p>
+            <h2 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Laporan & Rekap Absensi</h2>
+            <p className="text-xs md:text-sm font-bold text-slate-500 uppercase tracking-wider mt-1">Cetak rekapitulasi kehadiran dinamis.</p>
           </div>
         </div>
-        <div className="flex bg-white p-1 rounded-xl border shadow-sm w-full md:w-fit">
-          <button onClick={() => { setActiveTab('mahasiswa'); setDataMhs([]); setCurrentPage(1); }} className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 ${activeTab === 'mahasiswa' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500'}`}><Users size={16}/> Rekap Mahasiswa</button>
-          <button onClick={() => { setActiveTab('dosen'); setDataDosen([]); setCurrentPage(1); }} className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 ${activeTab === 'dosen' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500'}`}><BookOpen size={16}/> Rekap Dosen</button>
+        
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full md:w-fit overflow-x-auto shrink-0 shadow-inner">
+          <button onClick={() => { setActiveTab('mahasiswa'); setDataMhs([]); }} className={`flex-1 md:flex-none px-6 py-2.5 rounded-[12px] text-xs md:text-sm font-bold flex items-center justify-center gap-2.5 transition-all ${activeTab === 'mahasiswa' ? 'bg-white text-blue-700 shadow-sm shadow-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+            <Users size={18} strokeWidth={2.5}/> Rekap Mahasiswa
+          </button>
+          <button onClick={() => { setActiveTab('dosen'); setDataDosen([]); }} className={`flex-1 md:flex-none px-6 py-2.5 rounded-[12px] text-xs md:text-sm font-bold flex items-center justify-center gap-2.5 transition-all ${activeTab === 'dosen' ? 'bg-white text-blue-700 shadow-sm shadow-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+            <BookOpen size={18} strokeWidth={2.5}/> Rekap Dosen
+          </button>
         </div>
       </div>
 
-      {/* PANEL FILTER & KONTROL */}
-      <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-200 shadow-sm mb-6">
-        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Filter size={18} className="text-indigo-600"/> Filter Laporan</h3>
+      {/* FILTER PANEL */}
+      <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/40 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <h3 className="text-lg font-black text-slate-800 tracking-tight mb-6 flex items-center gap-3">
+          <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><Filter size={20} strokeWidth={2.5}/></div>
+          Parameter Laporan
+        </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           {activeTab === 'mahasiswa' && (
             <>
-              <div>
-                <label className="text-xs font-bold text-slate-600 mb-1.5 block">Angkatan / Kelompok</label>
-                <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-indigo-500 text-sm font-semibold" value={filterAngkatan} onChange={e => setFilterAngkatan(e.target.value)}>
+              <div className="animate-in fade-in">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Angkatan / Kelompok</label>
+                <select className="w-full bg-slate-50 border border-slate-200/60 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white text-sm font-bold text-slate-700 transition-all cursor-pointer appearance-none" value={filterAngkatan} onChange={e => setFilterAngkatan(e.target.value)}>
                   <option value="">-- Semua Kategori --</option>
                   {angkatanList.map(a => <option key={a.id} value={a.id}>{a.nama_angkatan}</option>)}
                 </select>
               </div>
-              <div>
-                <label className="text-xs font-bold text-slate-600 mb-1.5 block">Ketik Jurusan (Opsional)</label>
-                <input type="text" placeholder="Cth: ITK, SI, APQ..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-indigo-500 text-sm font-semibold uppercase" value={filterJurusan} onChange={e => setFilterJurusan(e.target.value.toUpperCase())}/>
+              <div className="animate-in fade-in">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Ketik Jurusan (Opsional)</label>
+                <input type="text" placeholder="Cth: ITK, SI, APQ..." className="w-full bg-slate-50 border border-slate-200/60 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white text-sm font-black tracking-widest text-slate-700 uppercase transition-all placeholder:font-medium placeholder:tracking-normal placeholder:normal-case placeholder:text-slate-400" value={filterJurusan} onChange={e => setFilterJurusan(e.target.value.toUpperCase())}/>
               </div>
             </>
           )}
 
           <div>
-            <label className="text-xs font-bold text-slate-600 mb-1.5 block">Mulai Tanggal</label>
+            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Mulai Tanggal</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 text-slate-400" size={18}/>
-              <input type="date" className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm font-semibold" value={startDate} onChange={e => setStartDate(e.target.value)} />
+              <Calendar className="absolute left-4 top-3.5 text-slate-400" size={18} strokeWidth={2.5}/>
+              <input type="date" className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200/60 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white text-sm font-bold text-slate-700 transition-all cursor-pointer" value={startDate} onChange={e => setStartDate(e.target.value)} />
             </div>
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-600 mb-1.5 block">Sampai Tanggal</label>
+            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Sampai Tanggal</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 text-slate-400" size={18}/>
-              <input type="date" className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm font-semibold" value={endDate} onChange={e => setEndDate(e.target.value)} />
+              <Calendar className="absolute left-4 top-3.5 text-slate-400" size={18} strokeWidth={2.5}/>
+              <input type="date" className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200/60 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white text-sm font-bold text-slate-700 transition-all cursor-pointer" value={endDate} onChange={e => setEndDate(e.target.value)} />
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-5 border-t border-slate-100">
-          <button onClick={tarikData} disabled={isLoading} className="px-6 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm shadow-sm hover:bg-slate-900 transition-colors disabled:opacity-70">
-            {isLoading ? 'Memproses...' : 'Tarik Data Peninjauan'}
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-slate-100/60 mt-4">
+          <button onClick={tarikData} disabled={isLoading} className="px-8 py-3.5 bg-slate-800 text-white rounded-2xl font-bold shadow-lg shadow-slate-800/20 active:scale-95 hover:bg-slate-900 transition-all disabled:opacity-70 disabled:active:scale-100 flex items-center justify-center gap-2.5">
+            {isLoading ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Memproses...</span> : 'Tarik Data Peninjauan'}
           </button>
-          
-          {activeTab === 'mahasiswa' && dataMhs.length > 0 && (
-            <button onClick={exportExcelMhs} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-md hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 animate-in zoom-in-95">
-              <Download size={16}/> Unduh Laporan Excel
-            </button>
-          )}
-
-          {activeTab === 'dosen' && dataDosen.length > 0 && (
-            <button onClick={exportExcelDosen} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-md hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 animate-in zoom-in-95">
-              <Download size={16}/> Unduh Laporan Excel
-            </button>
-          )}
         </div>
       </div>
 
-      {/* PREVIEW DATA (DENGAN PAGINATION) */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col min-h-[300px]">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400 flex-1">
-            <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-            <p className="font-semibold text-sm">Menghitung akumulasi dan rentang waktu dinamis...</p>
-          </div>
-        ) : currentList.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400 flex-1">
-            <FileSpreadsheet size={48} className="text-slate-200 mb-4"/>
-            <p className="font-bold text-slate-600 text-lg">Pratinjau Laporan Kosong</p>
-            <p className="text-sm">Silakan sesuaikan filter dan klik "Tarik Data Peninjauan".</p>
-          </div>
-        ) : (
-          <div className="flex flex-col flex-1">
-             <div className="p-6 pb-0">
-               <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex justify-between items-center mb-4">
+      {/* HASIL DATA (DATATABLE) */}
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/40 p-4 md:p-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 fill-mode-both">
+        <DataTable
+          data={currentListWithIndex}
+          columns={activeTab === 'mahasiswa' ? columnsMhs : columnsDosen}
+          isLoading={isLoading}
+          emptyMessage={
+            <div className="flex flex-col items-center justify-center py-16 text-slate-400 animate-in zoom-in-95 duration-500">
+              <div className="p-6 bg-slate-50 rounded-full mb-6">
+                <FileSpreadsheet size={48} strokeWidth={1.5} className="text-slate-300"/>
+              </div>
+              <p className="font-black text-slate-800 text-xl tracking-tight mb-2">Pratinjau Laporan Kosong</p>
+              <p className="text-sm font-medium text-slate-500 text-center max-w-sm">Silakan sesuaikan parameter laporan di atas lalu klik tombol <b>Tarik Data</b>.</p>
+            </div>
+          }
+          headerContent={
+            currentList.length > 0 ? (
+              <div className="flex flex-col xl:flex-row justify-between items-center w-full gap-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 flex flex-1 w-full justify-between items-center shadow-sm">
                   <div>
-                     <h4 className="font-bold text-indigo-800">Tinjauan Singkat Berhasil Ditarik!</h4>
-                     <p className="text-xs text-indigo-600 font-medium mt-0.5">Ditemukan total <b>{currentList.length} baris data</b>. Silakan klik tombol hijau "Unduh Laporan Excel" di atas untuk mendapatkan format laporan yang utuh dan presisi.</p>
+                    <h4 className="font-black text-emerald-800 tracking-tight text-base md:text-lg mb-1">Data Tinjauan Siap!</h4>
+                    <p className="text-[11px] md:text-xs font-bold text-emerald-600 uppercase tracking-widest mt-0.5">Ditemukan <b>{currentList.length} Baris Data</b>. Klik unduh untuk laporan utuh.</p>
                   </div>
-                  <FileSpreadsheet size={32} className="text-indigo-200 hidden sm:block"/>
-               </div>
-             </div>
-
-             <div className="overflow-x-auto w-full px-6">
-                <table className="w-full text-left whitespace-nowrap text-sm border-x border-t border-slate-200 rounded-t-xl overflow-hidden">
-                   <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs border-b border-slate-200">
-                     {activeTab === 'mahasiswa' ? (
-                       <tr>
-                         <th className="px-4 py-3 border-r border-slate-200 w-12 text-center">No</th>
-                         <th className="px-4 py-3">NIM</th>
-                         <th className="px-4 py-3">NAMA MAHASISWA</th>
-                         <th className="px-4 py-3 text-center">JURUSAN</th>
-                         <th className="px-4 py-3 text-center text-indigo-600">AKM%</th>
-                       </tr>
-                     ) : (
-                       <tr>
-                         <th className="px-4 py-3 border-r border-slate-200 w-12 text-center">No</th>
-                         <th className="px-4 py-3">NAMA DOSEN</th>
-                         <th className="px-4 py-3">MATA KULIAH</th>
-                         <th className="px-4 py-3 text-center">TANGGAL</th>
-                         <th className="px-4 py-3">AGENDA MATERI</th>
-                       </tr>
-                     )}
-                   </thead>
-                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                      {paginatedData.map((item, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50">
-                           <td className="px-4 py-3 text-center border-r border-slate-100">{startIndex + idx + 1}</td>
-                           {activeTab === 'mahasiswa' ? (
-                             <>
-                               <td className="px-4 py-3">{item.nomor_induk}</td>
-                               <td className="px-4 py-3 font-bold text-slate-800">{item.nama_lengkap}</td>
-                               <td className="px-4 py-3 text-center">{item.jurusan || '-'}</td>
-                               <td className="px-4 py-3 text-center font-black text-indigo-600">{item.akm}%</td>
-                             </>
-                           ) : (
-                             <>
-                               <td className="px-4 py-3 font-bold text-slate-800">{item.nama_dosen}</td>
-                               <td className="px-4 py-3">{item.nama_mk}</td>
-                               <td className="px-4 py-3 text-center">{item.tanggal}</td>
-                               <td className="px-4 py-3 truncate max-w-[200px]" title={item.agenda}>{item.agenda}</td>
-                             </>
-                           )}
-                        </tr>
-                      ))}
-                   </tbody>
-                </table>
-             </div>
-
-             {/* KONTROL PAGINATION */}
-             <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-4 border-t border-slate-200 gap-3 bg-white rounded-b-3xl mt-auto">
-                <div className="text-xs font-semibold text-slate-500">
-                  Melihat baris <span className="text-slate-800 font-bold">{startIndex + 1} - {Math.min(endIndex, currentList.length)}</span> dari total <span className="text-slate-800 font-bold">{currentList.length}</span> data
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
-                    disabled={currentPage === 1} 
-                    className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-600">
-                    Hal {currentPage} / {totalPages || 1}
+                  <div className="p-3 bg-white rounded-full hidden sm:block shadow-sm">
+                    <CheckCircle2 size={32} strokeWidth={2.5} className="text-emerald-500"/>
                   </div>
-                  <button 
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
-                    disabled={currentPage === totalPages || totalPages === 0} 
-                    className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
                 </div>
-             </div>
-          </div>
-        )}
+                
+                {activeTab === 'mahasiswa' && dataMhs.length > 0 && (
+                  <button onClick={exportExcelMhs} className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-3 shrink-0 w-full xl:w-auto">
+                    <Download size={18} strokeWidth={2.5}/> Unduh Excel Mahasiswa
+                  </button>
+                )}
+
+                {activeTab === 'dosen' && dataDosen.length > 0 && (
+                  <button onClick={exportExcelDosen} className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-3 shrink-0 w-full xl:w-auto">
+                    <Download size={18} strokeWidth={2.5}/> Unduh Excel Dosen
+                  </button>
+                )}
+              </div>
+            ) : null
+          }
+        />
       </div>
 
     </div>

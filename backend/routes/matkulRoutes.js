@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const { verifyToken, verifyRole } = require('../middlewares/authMiddleware');
 const { 
   getAllMatkul, createMatkul, updateMatkul, deleteMatkul, bulkDeleteMatkul, 
   resetPenugasan, assignMatkul, getPesertaDetail, getPesertaIds, deletePeserta, bulkCreateMatkul 
 } = require('../controllers/matkulController');
+
+router.use(verifyToken, verifyRole('admin'));
 
 router.get('/', getAllMatkul);
 router.post('/', createMatkul);

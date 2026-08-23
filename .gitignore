@@ -1,16 +1,309 @@
-# AI Agent & Harness Folders (Impeccable, Gemini, Codex, etc.)
+# ==============================================================================
+# AGGRESSIVE .GITIGNORE FOR EXPERIMENTAL / TESTING REPOSITORY
+# ==============================================================================
+
+# --------------------------------------------------
+# 1. ENVIRONMENT FILES
+# --------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# --------------------------------------------------
+# 2. DATABASE BACKUPS
+# --------------------------------------------------
+*.sql
+*.sql.gz
+*.sql.zip
+*.sql.tar
+*.dump
+*.bak
+*.backup
+
+# --------------------------------------------------
+# 3. BACKUP DIRECTORIES
+# --------------------------------------------------
+backups/
+backup/
+db-backups/
+database-backups/
+database_backup/
+backend/scripts/backups/
+backend/backups/
+storage/backups/
+
+# --------------------------------------------------
+# 4. RESTORE ARTIFACTS
+# --------------------------------------------------
+restore/
+restore_tmp/
+restore_temp/
+restore-output/
+restore_logs/
+restore-logs/
+staging-db/
+staging_database/
+tmp-db/
+temporary-db/
+database-restore/
+database_restore/
+
+# --------------------------------------------------
+# 5. LOGS
+# --------------------------------------------------
+*.log
+*.log.*
+logs/
+log/
+runtime-logs/
+runtime_logs/
+watchdog_alerts.log
+backup.log
+scheduler.log
+application.log
+error.log
+access.log
+
+# --------------------------------------------------
+# 6. PM2
+# --------------------------------------------------
+.pm2/
+.pm2/**
+pm2/
+pm2-logs/
+pm2_logs/
+# (ecosystem.config.js is not ignored)
+
+# --------------------------------------------------
+# 7. NODE.JS
+# --------------------------------------------------
+node_modules/
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --------------------------------------------------
+# 8. BUILD OUTPUT
+# --------------------------------------------------
+dist/
+build/
+out/
+output/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.vite/
+.turbo/
+
+# --------------------------------------------------
+# 9. TEST OUTPUT
+# --------------------------------------------------
+coverage/
+.nyc_output/
+test-results/
+test-results/**
+playwright-report/
+playwright-report/**
+allure-results/
+allure-report/
+junit-results/
+reports/generated/
+test-output/
+test-output/**
+
+# --------------------------------------------------
+# 10. TEMPORARY FILES
+# --------------------------------------------------
+tmp/
+temp/
+temporary/
+*.tmp
+*.temp
+*.swp
+*.swo
+*.orig
+*.old
+*.cache
+
+# --------------------------------------------------
+# 11. DATABASE LOCAL STATE
+# --------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+data/
+database-data/
+mysql-data/
+mysql/
+postgres-data/
+redis-data/
+
+# --------------------------------------------------
+# 12. MONITORING ARTIFACTS
+# --------------------------------------------------
+monitoring/
+monitoring-data/
+monitoring-data/**
+watchdog/
+watchdog-data/
+watchdog_logs/
+alerts/
+alert-logs/
+metrics/
+metrics-data/
+
+# --------------------------------------------------
+# 13. GENERATED RUNTIME STATE
+# --------------------------------------------------
+runtime/
+runtime-data/
+runtime-state/
+state/
+state-data/
+.pid
+*.pid
+*.pid.lock
+*.lock
+
+# --------------------------------------------------
+# 14. SECURITY / CREDENTIAL FILES
+# --------------------------------------------------
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+credentials.json
+credentials*.json
+service-account*.json
+secrets/
+secret/
+private/
+keys/
+*.token
+*.secret
+*.password
+
+# --------------------------------------------------
+# 15. DOCKER LOCAL ARTIFACTS
+# --------------------------------------------------
+docker-data/
+docker-volumes/
+docker-runtime/
+docker-logs/
+# (Dockerfile and compose files are not ignored)
+
+# --------------------------------------------------
+# 16. WINDOWS ARTIFACTS
+# --------------------------------------------------
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# --------------------------------------------------
+# 17. MACOS ARTIFACTS
+# --------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# --------------------------------------------------
+# 18. LINUX ARTIFACTS
+# --------------------------------------------------
+*~
+.nfs*
+
+# --------------------------------------------------
+# 19. IDE ARTIFACTS
+# --------------------------------------------------
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# --------------------------------------------------
+# 20. LOCAL DEVELOPMENT
+# --------------------------------------------------
+.local/
+.local-data/
+.dev/
+.dev-data/
+development-data/
+sandbox/
+sandbox-data/
+
+# --------------------------------------------------
+# 21. GENERATED ASSURANCE ARTIFACTS
+# --------------------------------------------------
+verification-output/
+verification-output/**
+audit-output/
+audit-output/**
+generated-reports/
+generated-reports/**
+generated-evidence/
+generated-evidence/**
+test-evidence/
+test-evidence/**
+runtime-evidence/
+runtime-evidence/**
+
+# --------------------------------------------------
+# 22. SCREENSHOTS / TEST MEDIA
+# --------------------------------------------------
+screenshots/
+test-screenshots/
+recordings/
+test-recordings/
+*.mp4
+*.mov
+*.webm
+
+# --------------------------------------------------
+# 23. GENERATED API / DEBUG OUTPUT
+# --------------------------------------------------
+*.response
+*.response.json
+*.request
+*.request.json
+*.trace
+*.har
+
+# --------------------------------------------------
+# 24. LOCAL CONFIGURATION
+# --------------------------------------------------
+config.local.*
+configuration.local.*
+*.local.json
+*.local.yaml
+*.local.yml
+
+# --------------------------------------------------
+# 25. ARCHIVE / GENERATED PACKAGES
+# --------------------------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# --------------------------------------------------
+# 26. EXISTING RULES / HARNESS ARTIFACTS
+# --------------------------------------------------
 .agents/
 .codex/
 .gemini/
 .impeccable/
 .kiro/
-
-# IDE & Editor folders
-.vscode/
-.idea/
-.DS_Store
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+.scratch/
+.github/
+scratch/

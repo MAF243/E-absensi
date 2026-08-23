@@ -21,25 +21,38 @@ import DosenDashboard from './pages/dosen/DosenDashboard';
 
 // 5. Modul Dasbor Mahasiswa
 import MahasiswaDashboard from './pages/mahasiswa/MahasiswaDashboard';
+import GlobalToast from './components/common/GlobalToast';
+import GlobalConfirm from './components/common/GlobalConfirm';
+import ProtectedRoute from './components/common/ProtectedRoute';
+import PublicRoute from './components/common/PublicRoute';
+import { useNavigate } from 'react-router-dom';
+
+const GlobalNavigate = () => {
+  window.__NAVIGATE__ = useNavigate();
+  return null;
+};
 
 function App() {
   return (
     <BrowserRouter>
+      <GlobalNavigate />
+      <GlobalToast />
+      <GlobalConfirm />
       <Routes>
         {/* Rute Halaman Login */}
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
         
         {/* Rute Halaman Admin */}
-        <Route path="/dashboard-admin" element={<AdminDashboard />} />
-        <Route path="/admin/data-mahasiswa" element={<DataMahasiswa />} />
-        <Route path="/admin/data-dosen" element={<DataDosen />} />
-        <Route path="/admin/data-matkul" element={<DataMatkul />} /> {/* Rute baru untuk mata kuliah */}
+        <Route path="/dashboard-admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/data-mahasiswa" element={<ProtectedRoute allowedRoles={['admin']}><DataMahasiswa /></ProtectedRoute>} />
+        <Route path="/admin/data-dosen" element={<ProtectedRoute allowedRoles={['admin']}><DataDosen /></ProtectedRoute>} />
+        <Route path="/admin/data-matkul" element={<ProtectedRoute allowedRoles={['admin']}><DataMatkul /></ProtectedRoute>} /> 
         
         {/* Rute Halaman Dosen */}
-        <Route path="/dashboard-dosen" element={<DosenDashboard />} />
+        <Route path="/dashboard-dosen" element={<ProtectedRoute allowedRoles={['dosen']}><DosenDashboard /></ProtectedRoute>} />
         
         {/* Rute Halaman Mahasiswa */}
-        <Route path="/dashboard-mahasiswa" element={<MahasiswaDashboard />} />
+        <Route path="/dashboard-mahasiswa" element={<ProtectedRoute allowedRoles={['mahasiswa']}><MahasiswaDashboard /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

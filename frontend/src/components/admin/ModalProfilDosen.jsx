@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, BookOpen, CalendarDays, ChevronDown, ChevronUp, CheckSquare, Trash2, AlertTriangle } from 'lucide-react';
+import axiosClient from '../../utils/axiosClient';
 
 const ModalProfilDosen = ({ isOpen, onClose, dosenData }) => {
   const [activeTab, setActiveTab] = useState('matkul');
@@ -13,8 +14,8 @@ const ModalProfilDosen = ({ isOpen, onClose, dosenData }) => {
   const fetchProfilDetail = () => {
     if (dosenData) {
       setIsLoading(true);
-      fetch(`http://localhost:5000/api/dosen/${dosenData.id}/detail`)
-        .then(res => res.json())
+      axiosClient.get(`/dosen/${dosenData.id}/detail`)
+        .then(res => res.data)
         .then(data => {
             if(data.success) {
                 setAssignedMatkul(data.data.mata_kuliah || []);
@@ -54,7 +55,7 @@ const ModalProfilDosen = ({ isOpen, onClose, dosenData }) => {
   const handleResetRiwayat = async () => {
     if (window.confirm(`PERINGATAN!\n\nAnda yakin ingin menghapus SELURUH RIWAYAT SESI & AGENDA milik dosen ${dosenData.nama_lengkap}?\n\n(Data absensi mahasiswa di sesi tersebut juga akan hangus).`)) {
       try {
-        const res = await fetch(`http://localhost:5000/api/dosen/${dosenData.id}/reset-sesi`, { method: 'DELETE' }).then(r => r.json());
+        const res = await axiosClient.delete(`/dosen/${dosenData.id}/reset-sesi`).then(r => r.data);
         if (res.success) {
           alert(res.message);
           fetchProfilDetail(); // Refresh data otomatis setelah dihapus
@@ -69,7 +70,7 @@ const ModalProfilDosen = ({ isOpen, onClose, dosenData }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
-      <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl relative flex flex-col md:flex-row overflow-hidden max-h-[90vh]" onClick={e => e.stopPropagation()}>
+      <div className="bg-white w-full max-w-5xl rounded-[32px] shadow-2xl relative flex flex-col md:flex-row overflow-hidden max-h-[90vh]" onClick={e => e.stopPropagation()}>
         
         {/* BAGIAN KIRI: PROFIL DOSEN */}
         <div className="w-full md:w-1/3 bg-blue-600 p-8 text-white flex flex-col items-center justify-center shrink-0">
@@ -97,7 +98,7 @@ const ModalProfilDosen = ({ isOpen, onClose, dosenData }) => {
 
         {/* BAGIAN KANAN: TAB KONTEN */}
         <div className="flex-1 flex flex-col bg-slate-50 min-h-[400px]">
-          <button onClick={onClose} className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-200 rounded-full transition-colors z-10"><X size={20}/></button>
+          <button onClick={onClose} className="absolute top-4 right-4 p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors z-10"><X size={20}/></button>
 
           {/* Navigasi Tab */}
           <div className="flex border-b border-slate-200 px-6 pt-6">
@@ -121,7 +122,7 @@ const ModalProfilDosen = ({ isOpen, onClose, dosenData }) => {
                         {assignedMatkul.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {assignedMatkul.map(mk => (
-                            <div key={mk.id} className="p-4 border border-slate-200 rounded-2xl bg-slate-50">
+                            <div key={mk.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50">
                                 <p className="text-[10px] font-bold text-blue-600 uppercase mb-1">{mk.kode_mk} • SMT {mk.semester}</p>
                                 <p className="font-bold text-slate-800 leading-tight">{mk.nama_mk}</p>
                             </div>
@@ -140,7 +141,7 @@ const ModalProfilDosen = ({ isOpen, onClose, dosenData }) => {
                     {activeTab === 'agenda' && (
                     <div className="animate-in fade-in space-y-4 pb-16">
                         {assignedMatkul.length > 0 ? assignedMatkul.map(mk => (
-                        <div key={mk.id} className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                        <div key={mk.id} className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                             <button onClick={() => toggleAgenda(mk.id)} className="w-full bg-slate-50 p-4 flex justify-between items-center hover:bg-slate-100 transition-colors">
                             <div className="text-left">
                                 <p className="font-bold text-slate-800">{mk.nama_mk}</p>
@@ -184,7 +185,7 @@ const ModalProfilDosen = ({ isOpen, onClose, dosenData }) => {
                         {/* TOMBOL RESET RIWAYAT MUNCUL JIKA ADA AGENDA */}
                         {riwayatAgenda.length > 0 && (
                           <div className="absolute bottom-6 right-6">
-                            <button onClick={handleResetRiwayat} className="flex items-center gap-2 bg-rose-50 text-rose-600 border border-rose-200 px-4 py-2 rounded-xl text-xs font-bold hover:bg-rose-100 transition-colors shadow-sm">
+                            <button onClick={handleResetRiwayat} className="flex items-center gap-2 bg-rose-50 text-rose-600 border border-rose-200 px-4 py-2 rounded-xl text-xs font-bold hover:bg-rose-100 active:scale-[0.98] transition-all shadow-sm">
                               <Trash2 size={16} /> Bersihkan Semua Riwayat
                             </button>
                           </div>
