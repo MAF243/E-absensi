@@ -105,7 +105,7 @@ const ModalUploadCSVDosen = ({ isOpen, onClose, onSuccess }) => {
         {csvData.length === 0 ? (
           <div className="space-y-6">
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
-              <h4 className="font-semibold text-slate-800 flex items-center gap-2 mb-4"><Info size={18} className="text-blue-600" /> Panduan Impor Data</h4>
+              <h4 className="font-semibold text-slate-800 flex items-center gap-2 mb-4"><Info size={18} className="text-blue-600" /> Panduan Input Data Dosen</h4>
               <ol className="relative border-l border-slate-300 ml-3 space-y-5">
                 <li className="pl-6">
                   <span className="absolute flex items-center justify-center w-6 h-6 bg-blue-100 rounded-full -left-3 text-blue-600 font-bold text-xs">1</span>
@@ -114,10 +114,23 @@ const ModalUploadCSVDosen = ({ isOpen, onClose, onSuccess }) => {
                 </li>
                 <li className="pl-6">
                   <span className="absolute flex items-center justify-center w-6 h-6 bg-slate-100 rounded-full -left-3 text-slate-600 font-bold text-xs">2</span>
-                  <h5 className="font-semibold text-slate-800 text-sm">Unggah File</h5>
-                  <p className="text-sm text-slate-500 mt-1">Pilih file CSV yang sudah diisi.</p>
+                  <h5 className="font-semibold text-slate-800 text-sm">Isi dan unggah file</h5>
+                  <p className="text-sm text-slate-500 mt-1">Gunakan pemisah titik koma (<b>;</b>) agar nama bergelar tetap terbaca.</p>
                 </li>
               </ol>
+              <div className="mt-5 ml-3 rounded-xl border border-blue-100 bg-white p-4 text-xs text-slate-600">
+                <p className="font-bold text-slate-800 mb-2">Format kolom wajib:</p>
+                <code className="block overflow-x-auto whitespace-nowrap rounded-lg bg-slate-900 px-3 py-2 font-mono text-[11px] text-blue-100">nidn;nama;jk;status;password</code>
+                <p className="font-bold text-slate-800 mt-3 mb-1">Contoh isi:</p>
+                <code className="block overflow-x-auto whitespace-nowrap rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 font-mono text-[11px] text-slate-700">04123456;Dr. Budi Santoso, M.Kom.;L;aktif;rahasia123</code>
+                <ul className="mt-3 space-y-1.5 text-slate-500">
+                  <li><b>NIDN:</b> NIDN atau inisial dosen, harus unik.</li>
+                  <li><b>NAMA:</b> nama lengkap dan gelar dosen.</li>
+                  <li><b>JK:</b> isi <b>L</b> atau <b>P</b>.</li>
+                  <li><b>STATUS:</b> isi <b>aktif</b> atau <b>tidak aktif</b>.</li>
+                  <li><b>PASSWORD:</b> password awal; jika kosong, sistem memakai NIDN/inisial.</li>
+                </ul>
+              </div>
             </div>
 
             <input type="file" ref={fileInputRef} accept=".csv" onChange={handleFileSelect} className="hidden" />

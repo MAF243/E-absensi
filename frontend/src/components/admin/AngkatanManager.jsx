@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axiosClient from '../../utils/axiosClient';
 import useUiStore from '../../store/useUiStore';
-import { Trash2, Plus, Users, Library, Loader2, Info, ChevronRight, Layers } from 'lucide-react';
+import { Trash2, Plus, Users, Library, Loader2, Info, ChevronRight, Layers, Pencil, Check, X } from 'lucide-react';
 
 const AngkatanManager = () => {
   const [angkatanList, setAngkatanList] = useState([]);
@@ -9,7 +9,11 @@ const AngkatanManager = () => {
   const [selectedAngkatan, setSelectedAngkatan] = useState(null);
   
   const [angkatanInput, setAngkatanInput] = useState('');
+  const [editingAngkatanId, setEditingAngkatanId] = useState(null);
+  const [editingAngkatanName, setEditingAngkatanName] = useState('');
   const [kelasInput, setKelasInput] = useState('');
+  const [editingKelasId, setEditingKelasId] = useState(null);
+  const [editingKelasName, setEditingKelasName] = useState('');
   
   const [isLoadingAngkatan, setIsLoadingAngkatan] = useState(true);
   const [isLoadingKelas, setIsLoadingKelas] = useState(false);
@@ -89,6 +93,39 @@ const AngkatanManager = () => {
     }
   };
 
+  const handleStartEditAngkatan = (angkatan) => {
+    setEditingAngkatanId(angkatan.id);
+    setEditingAngkatanName(angkatan.nama_angkatan);
+  };
+
+  const handleCancelEditAngkatan = () => {
+    setEditingAngkatanId(null);
+    setEditingAngkatanName('');
+  };
+
+  const handleUpdateAngkatan = async (e, id) => {
+    e.preventDefault();
+    const namaAngkatan = editingAngkatanName.trim();
+    if (!namaAngkatan) return showToast('Nama angkatan tidak boleh kosong', 'error');
+
+    setIsSubmitting(true);
+    try {
+      await axiosClient.put(`/angkatan/${id}`, { nama_angkatan: namaAngkatan });
+      setAngkatanList((currentList) => currentList.map((item) => (
+        item.id === id ? { ...item, nama_angkatan: namaAngkatan } : item
+      )));
+      if (selectedAngkatan?.id === id) {
+        setSelectedAngkatan((current) => ({ ...current, nama_angkatan: namaAngkatan }));
+      }
+      handleCancelEditAngkatan();
+      showToast('Nama angkatan berhasil diperbarui', 'success');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Gagal mengubah nama angkatan', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // --- Handlers for Kelas ---
   const handleAddKelas = async (e) => {
     e.preventDefault();
@@ -127,8 +164,38 @@ const AngkatanManager = () => {
     }
   };
 
+  const handleStartEditKelas = (kelas) => {
+    setEditingKelasId(kelas.id);
+    setEditingKelasName(kelas.nama_kelas);
+  };
+
+  const handleCancelEditKelas = () => {
+    setEditingKelasId(null);
+    setEditingKelasName('');
+  };
+
+  const handleUpdateKelas = async (e, id) => {
+    e.preventDefault();
+    const namaKelas = editingKelasName.trim();
+    if (!namaKelas) return showToast('Nama kelas tidak boleh kosong', 'error');
+
+    setIsSubmitting(true);
+    try {
+      await axiosClient.put(`/kelas/${id}`, { nama_kelas: namaKelas });
+      setKelasList((currentList) => currentList.map((item) => (
+        item.id === id ? { ...item, nama_kelas: namaKelas } : item
+      )));
+      handleCancelEditKelas();
+      showToast('Nama kelas berhasil diperbarui', 'success');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Gagal mengubah nama kelas', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-100 w-full max-w-5xl">
+    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-100 w-full max-w-7xl">
       <div className="flex items-center gap-3 mb-6 pb-5 border-b border-slate-100">
         <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
           <Library size={24} strokeWidth={2.5} />
@@ -139,10 +206,10 @@ const AngkatanManager = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-6 lg:gap-8">
         
         {/* KOLOM KIRI: ANGKATAN */}
-        <div className="flex flex-col border-r-0 md:border-r border-slate-100 md:pr-8">
+        <div className="flex flex-col border-r-0 md:border-r border-slate-100 md:pr-6 lg:pr-8 min-w-0">
           <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
             <Users size={18} className="text-blue-500" />
             1. Pilih / Tambah Angkatan
@@ -181,13 +248,38 @@ const AngkatanManager = () => {
                     onClick={() => setSelectedAngkatan(a)}
                     className={`flex justify-between items-center p-3 rounded-2xl cursor-pointer transition-all border ${selectedAngkatan?.id === a.id ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-slate-100 hover:border-blue-100 hover:bg-slate-50'} group`}
                   >
-                    <div className="flex items-center gap-3">
+                    {editingAngkatanId === a.id ? (
+                      <form onSubmit={(e) => handleUpdateAngkatan(e, a.id)} className="flex items-center gap-2 w-full" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          autoFocus
+                          value={editingAngkatanName}
+                          onChange={(e) => setEditingAngkatanName(e.target.value)}
+                          className="min-w-0 flex-1 bg-white border border-blue-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10"
+                          disabled={isSubmitting}
+                        />
+                        <button type="submit" className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl" title="Simpan nama angkatan" disabled={isSubmitting}>
+                          <Check size={16} strokeWidth={2.5} />
+                        </button>
+                        <button type="button" onClick={handleCancelEditAngkatan} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl" title="Batalkan edit" disabled={isSubmitting}>
+                          <X size={16} strokeWidth={2.5} />
+                        </button>
+                      </form>
+                    ) : (
+                    <>
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className={`p-2 rounded-xl transition-colors ${selectedAngkatan?.id === a.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
                         <Library size={16} strokeWidth={2.5} />
                       </div>
-                      <span className={`font-bold text-sm ${selectedAngkatan?.id === a.id ? 'text-blue-700' : 'text-slate-700'}`}>{a.nama_angkatan}</span>
+                      <span className={`font-bold text-sm truncate ${selectedAngkatan?.id === a.id ? 'text-blue-700' : 'text-slate-700'}`}>{a.nama_angkatan}</span>
                     </div>
                     <div className="flex items-center gap-1">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleStartEditAngkatan(a); }} 
+                        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
+                        title="Edit nama angkatan"
+                      >
+                        <Pencil size={16} strokeWidth={2.5} />
+                      </button>
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleDeleteAngkatan(a.id, a.nama_angkatan); }} 
                         className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
@@ -196,6 +288,8 @@ const AngkatanManager = () => {
                       </button>
                       <ChevronRight size={18} className={`transition-transform ${selectedAngkatan?.id === a.id ? 'text-blue-500' : 'text-slate-300'}`} />
                     </div>
+                    </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -204,7 +298,7 @@ const AngkatanManager = () => {
         </div>
 
         {/* KOLOM KANAN: KELAS */}
-        <div className="flex flex-col">
+        <div className="flex flex-col min-w-0">
           <h4 className={`font-bold mb-4 flex items-center gap-2 ${selectedAngkatan ? 'text-slate-700' : 'text-slate-400'}`}>
             <Layers size={18} className={selectedAngkatan ? 'text-blue-500' : 'text-slate-300'} />
             2. Kelas di {selectedAngkatan ? `"${selectedAngkatan.nama_angkatan}"` : '...'}
@@ -240,14 +334,39 @@ const AngkatanManager = () => {
                 ) : (
                   <div className="max-h-[350px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
                     {kelasList.map(k => (
-                      <div key={k.id} className="flex justify-between items-center p-3 rounded-2xl bg-white border border-slate-100 hover:border-blue-200 hover:shadow-sm transition-all group">
-                        <div className="flex items-center gap-3">
+                      <div key={k.id} className="flex justify-between items-center gap-3 p-3 rounded-2xl bg-white border border-slate-100 hover:border-blue-200 hover:shadow-sm transition-all group">
+                        {editingKelasId === k.id ? (
+                          <form onSubmit={(e) => handleUpdateKelas(e, k.id)} className="flex items-center gap-2 w-full">
+                            <input
+                              autoFocus
+                              value={editingKelasName}
+                              onChange={(e) => setEditingKelasName(e.target.value)}
+                              className="min-w-0 flex-1 bg-white border border-blue-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10"
+                              disabled={isSubmitting}
+                            />
+                            <button type="submit" className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl" title="Simpan nama kelas" disabled={isSubmitting}>
+                              <Check size={16} strokeWidth={2.5} />
+                            </button>
+                            <button type="button" onClick={handleCancelEditKelas} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl" title="Batalkan edit" disabled={isSubmitting}>
+                              <X size={16} strokeWidth={2.5} />
+                            </button>
+                          </form>
+                        ) : (
+                        <>
+                        <div className="flex items-center gap-3 min-w-0">
                           <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
                             <Layers size={16} strokeWidth={2.5} />
                           </div>
-                          <span className="font-bold text-sm text-slate-700">{k.nama_kelas}</span>
+                          <span className="font-bold text-sm text-slate-700 truncate">{k.nama_kelas}</span>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleStartEditKelas(k); }} 
+                            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
+                            title="Edit nama kelas"
+                          >
+                            <Pencil size={16} strokeWidth={2.5} />
+                          </button>
                           <button 
                             onClick={(e) => { e.stopPropagation(); if(window.openManageKelas) window.openManageKelas(k); }} 
                             className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
@@ -262,6 +381,8 @@ const AngkatanManager = () => {
                             <Trash2 size={16} strokeWidth={2.5} />
                           </button>
                         </div>
+                        </>
+                        )}
                       </div>
                     ))}
                   </div>

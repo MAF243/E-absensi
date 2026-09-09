@@ -7,6 +7,7 @@ const useAuthStore = create(
       user: null,
       token: null,
       login: (userData, userToken) => set({ user: userData, token: userToken }),
+      setUser: (userData) => set({ user: userData }),
       logout: () => set({ user: null, token: null }),
     }),
     {

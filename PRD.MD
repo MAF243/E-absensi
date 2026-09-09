@@ -1,17 +1,21 @@
 # Product Requirements Document — E-Absensi STIKOM Elrahma
 
-| Atribut | Nilai |
-| --- | --- |
-| Produk | E-Absensi STIKOM Elrahma Bogor |
-| Status dokumen | Baseline implementasi saat ini |
-| Pengguna | Admin Akademik, Dosen, Mahasiswa |
-| Platform | Web responsif (desktop dan perangkat mobile) |
+| Atribut        | Nilai                                                              |
+| -------------- | ------------------------------------------------------------------ |
+| Produk         | E-Absensi STIKOM Elrahma Bogor                                     |
+| Status dokumen | Baseline implementasi dan backlog terverifikasi (9 September 2026) |
+| Pengguna       | Admin Akademik, Dosen, Mahasiswa                                   |
+| Platform       | Web responsif (desktop dan perangkat mobile)                       |
 
 ## 1. Ringkasan produk
 
 E-Absensi adalah sistem administrasi dan presensi perkuliahan. Admin mengelola data akademik, penugasan kelas, jadwal, sesi, dan laporan. Dosen membuka serta menutup sesi kelas dan memeriksa rekap kehadiran. Mahasiswa melihat jadwal hariannya lalu melakukan presensi kelas luring melalui pemindaian QR dengan validasi lokasi perangkat.
 
 Produk ini dirancang untuk memastikan bahwa kehadiran tercatat terhadap sesi kuliah yang benar, mengurangi pencatatan manual, dan menyediakan laporan yang dapat diekspor.
+
+### Status pembacaan dokumen
+
+Dokumen ini membedakan tiga keadaan: **tersedia** berarti alurnya sudah didukung backend dan/atau frontend; **parsial** berarti sebagian alur tersedia tetapi masih ada gap yang berdampak pada penggunaan; **backlog** berarti kebutuhan belum menjadi perilaku aplikasi. Sumber kebenaran skema aktif adalah migration Knex dan skrip bootstrap database di `backend/`, bukan dump SQL historis.
 
 ## 2. Sasaran dan metrik keberhasilan
 
@@ -20,7 +24,7 @@ Produk ini dirancang untuk memastikan bahwa kehadiran tercatat terhadap sesi kul
 - Mengelola master mahasiswa, dosen, mata kuliah, serta kategori angkatan/kelompok dari satu portal.
 - Menghubungkan mata kuliah kepada dosen dan peserta kelas paket atau kelas kelompok/KRS.
 - Mengendalikan presensi melalui sesi kelas berstatus berlangsung atau selesai.
-- Memvalidasi presensi luring memakai QR khusus mata kuliah dan posisi GPS dekat kampus.
+- Memvalidasi presensi luring memakai QR deterministik berbasis mata kuliah dan posisi GPS dekat kampus.
 - Menyediakan rekap kehadiran mahasiswa dan aktivitas mengajar dosen dalam format Excel.
 
 ### Indikator keberhasilan awal
@@ -32,11 +36,11 @@ Produk ini dirancang untuk memastikan bahwa kehadiran tercatat terhadap sesi kul
 
 ## 3. Peran pengguna
 
-| Peran | Kebutuhan utama | Akses yang diimplementasikan |
-| --- | --- | --- |
-| Admin Akademik | Menjaga data akademik dan memperoleh laporan | Dashboard, master data, angkatan/kelompok, penugasan kelas, jadwal/sesi, QR, rekap dan ekspor |
-| Dosen | Menjalankan kelas dan mencatat kehadiran | Daftar kelas, buka/tutup sesi, pengaturan profil, riwayat sesi, serta rekap manual H/I/S/A |
-| Mahasiswa | Mengetahui kelas hari ini dan presensi | Jadwal harian, pemindaian QR kelas luring dengan GPS, serta akses tautan kelas daring |
+| Peran          | Kebutuhan utama                              | Akses yang diimplementasikan                                                                             |
+| -------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Admin Akademik | Menjaga data akademik dan memperoleh laporan | Dashboard, master data, angkatan/kelompok, penugasan kelas, jadwal/sesi, QR, rekap, aktivitas dan ekspor |
+| Dosen          | Menjalankan kelas dan mencatat kehadiran     | Daftar kelas, buka/tutup sesi, pengaturan profil, riwayat sesi, serta rekap manual H/I/S/A               |
+| Mahasiswa      | Mengetahui kelas hari ini dan presensi       | Jadwal harian, pemindaian QR kelas luring dengan GPS, serta akses tautan kelas daring                    |
 
 ## 4. Ruang lingkup fungsional
 
@@ -45,8 +49,11 @@ Produk ini dirancang untuk memastikan bahwa kehadiran tercatat terhadap sesi kul
 - Pengguna masuk dengan nomor induk, nama lengkap, atau inisial dan kata sandi.
 - Sistem memverifikasi kata sandi menggunakan `bcrypt` dan menyimpan waktu login terakhir.
 - Akun dosen atau mahasiswa berstatus `cuti` atau `tidak aktif` ditolak saat login.
+- Backend menerbitkan JWT berdurasi 12 jam; route yang dilindungi memeriksa token dan peran pengguna.
 - Setelah login, pengguna diarahkan ke dashboard berdasarkan peran.
-- Antarmuka menyediakan logout. Form “Lupa Password” saat ini hanya menampilkan notifikasi di klien; belum ada proses reset kata sandi pada backend.
+- Antarmuka menyediakan logout dengan menghapus sesi/token di klien. Revocation server-side dan refresh token belum tersedia.
+- Form “Lupa Password” saat ini hanya menampilkan notifikasi di klien; belum ada proses reset kata sandi pada backend.
+- `authLimiter` sudah dikonfigurasi di server, tetapi belum diterapkan pada route login; perlindungan brute-force masih menjadi backlog.
 
 ### 4.2 Portal admin
 
@@ -56,6 +63,7 @@ Produk ini dirancang untuk memastikan bahwa kehadiran tercatat terhadap sesi kul
 - Menampilkan tiga mahasiswa dengan tingkat kehadiran tertinggi serta tiga dengan tingkat kehadiran di bawah 80% apabila data absensi tersedia.
 - Menampilkan lima log login terbaru.
 - Data dashboard diperbarui otomatis setiap lima detik saat menu dashboard aktif.
+- Kartu `rata_kehadiran` belum didukung oleh nilai statistik backend dan harus dianggap sebagai gap tampilan sampai query diperbaiki.
 
 #### Data mahasiswa dan kategori
 
@@ -71,6 +79,7 @@ Produk ini dirancang untuk memastikan bahwa kehadiran tercatat terhadap sesi kul
 - Impor massal CSV dan hapus massal.
 - Profil dosen menunjukkan mata kuliah yang diampu serta riwayat sesi/agenda.
 - Admin dapat menghapus seluruh riwayat sesi seorang dosen.
+- Sistem mencatat aktivitas melalui middleware dan menyediakan endpoint serta halaman log aktivitas admin. Cakupan filter, ekspor, dan event belum lengkap.
 
 #### Mata kuliah dan peserta
 
@@ -84,7 +93,7 @@ Produk ini dirancang untuk memastikan bahwa kehadiran tercatat terhadap sesi kul
 
 - Admin mengatur hari, waktu mulai/selesai, target pertemuan, dan ruangan tiap mata kuliah; jadwal dapat direset.
 - Admin dapat membuka sesi darurat (override) atau menutup sesi yang sedang berlangsung.
-- Sistem menghasilkan QR untuk tiap mata kuliah dengan format `stikomabsen://sesi/MATKUL-{id}-{kode_mk}` dan mendukung cetak QR.
+- Sistem menghasilkan QR deterministik untuk tiap mata kuliah dengan format `stikomabsen://sesi/MATKUL-{id}-{kode_mk}` dan mendukung cetak QR. QR belum berupa token unik per sesi dengan masa berlaku pendek.
 - Sesi berakhir otomatis setiap menit jika melewati jam akhir di hari yang sama atau berasal dari hari sebelumnya.
 
 #### Rekap dan ekspor
@@ -111,6 +120,7 @@ Produk ini dirancang untuk memastikan bahwa kehadiran tercatat terhadap sesi kul
 - Backend memeriksa format QR, sesi mata kuliah yang sedang berlangsung, jarak dari koordinat kampus, dan duplikasi absensi sebelum menyimpan status `hadir`.
 - Radius yang diimplementasikan adalah 10 meter dari koordinat kampus `-6.5902172, 106.7854656`.
 - Untuk sesi daring aktif, antarmuka membuka tautan pertemuan dan menampilkan status hadir secara lokal.
+- Status presensi daring belum disimpan ke backend sehingga tidak boleh dianggap sebagai kehadiran final pada rekap.
 
 ## 5. Alur utama
 
@@ -130,46 +140,55 @@ Produk ini dirancang untuk memastikan bahwa kehadiran tercatat terhadap sesi kul
 
 ## 6. Model data konseptual
 
-| Entitas | Keterangan utama |
-| --- | --- |
-| `users` | Akun admin, dosen, dan mahasiswa; mencakup identitas, peran, kata sandi ter-hash, status akademik, jurusan, angkatan, dan login terakhir |
-| `angkatan` | Kategori angkatan atau kelompok mahasiswa |
-| `grup_mahasiswa` | Keanggotaan tambahan mahasiswa pada kelompok |
-| `mata_kuliah` | Master mata kuliah, dosen penanggung jawab, model kelas, angkatan, dan jadwal |
-| `peserta_kelas` | Daftar mahasiswa eksplisit untuk kelas kelompok/KRS |
-| `sesi_kuliah` | Sesi yang dibuka dosen/admin, status, waktu, tipe, agenda, bobot, dan tautan daring |
-| `absensi` | Kehadiran mahasiswa per sesi dan mata kuliah dengan status H/I/S/A |
-| `password_reset_tokens` *(rencana)* | Token reset yang di-hash, kedaluwarsa, sekali pakai, dan terkait pengguna |
-| `user_sessions` / refresh token *(rencana)* | Sesi/perangkat pengguna untuk logout otomatis dan pencabutan akses |
-| `activity_logs` *(rencana)* | Jejak audit append-only atas tindakan penting dan perubahan data |
-| `app_settings` *(rencana)* | Konfigurasi global yang dikelola admin, misalnya lokasi, radius, masa sesi, dan email |
-| `pengajuan_absensi` *(rencana)* | Pengajuan izin/sakit dan proses persetujuan dosen |
+| Entitas                                     | Keterangan utama                                                                                                                         |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`                                     | Akun admin, dosen, dan mahasiswa; mencakup identitas, peran, kata sandi ter-hash, status akademik, jurusan, angkatan, dan login terakhir |
+| `angkatan`                                  | Kategori angkatan atau kelompok mahasiswa                                                                                                |
+| `grup_mahasiswa`                            | Keanggotaan tambahan mahasiswa pada kelompok                                                                                             |
+| `mata_kuliah`                               | Master mata kuliah, dosen penanggung jawab, model kelas, angkatan, dan jadwal                                                            |
+| `peserta_kelas`                             | Daftar mahasiswa eksplisit untuk kelas kelompok/KRS                                                                                      |
+| `sesi_kuliah`                               | Sesi yang dibuka dosen/admin, status, waktu, tipe, agenda, bobot, dan tautan daring                                                      |
+| `absensi`                                   | Kehadiran mahasiswa per sesi dan mata kuliah dengan status H/I/S/A                                                                       |
+| `password_reset_tokens` _(rencana)_         | Token reset yang di-hash, kedaluwarsa, sekali pakai, dan terkait pengguna                                                                |
+| `user_sessions` / refresh token _(rencana)_ | Sesi/perangkat pengguna untuk logout otomatis dan pencabutan akses                                                                       |
+| `activity_logs` _(rencana)_                 | Jejak audit append-only atas tindakan penting dan perubahan data                                                                         |
+| `app_settings` _(rencana)_                  | Konfigurasi global yang dikelola admin, misalnya lokasi, radius, masa sesi, dan email                                                    |
+| `pengajuan_absensi` _(rencana)_             | Pengajuan izin/sakit dan proses persetujuan dosen                                                                                        |
 
-### 6.1 Basis data dalam dump SQL (16 Juli 2026)
+### 6.1 Sumber skema dan status basis data
 
-Dump [e_absensi_stikom (6).sql](e_absensi_stikom%20(6).sql) berasal dari MySQL 8.0.30 dan mendefinisikan delapan tabel berikut.
+Skema aktif dibangun dari migration Knex berikut dan dapat dijalankan melalui `npm run migrate` dari folder `backend/`:
 
-| Tabel | Kolom/aturan penting dari dump |
-| --- | --- |
-| `users` | Identitas unik (`nomor_induk`), peran `admin`/`dosen`/`mahasiswa`, hash kata sandi, status akademik, gender, jurusan, angkatan, waktu login dan pembuatan |
-| `angkatan` | Nama angkatan unik; satu angkatan dapat memiliki banyak pengguna dan mata kuliah |
-| `mata_kuliah` | Kode mata kuliah unik, model `paket`/`kelompok`, SKS, dosen, angkatan, semester, jadwal, serta target pertemuan |
-| `peserta_kelas` | Tabel penghubung mahasiswa dan mata kuliah untuk kelas kelompok/KRS |
-| `sesi_kuliah` | Mata kuliah, dosen, tipe `offline`/`online`, tautan, status `berlangsung`/`selesai`, waktu, agenda, jenis, dan bobot sesi |
-| `absensi` | Penghubung pengguna, mata kuliah, dan (opsional) sesi; status `hadir`/`sakit`/`izin`/`alpa` |
-| `kehadiran` | Tabel presensi lama/alternatif: mahasiswa, sesi, waktu scan, status `hadir`/`izin`/`sakit`/`alfa` |
+- `backend/migrations/20260805173206_initial_schema.js`
+- `backend/migrations/20260807091451_create_kelas_table.js`
+- `backend/migrations/20260808000000_add_missing_indexes.js`
+- `backend/migrations/20260823000000_align_attendance_domain.js`
+
+`backend/scripts/initDb.js` dan skrip sinkronisasi/seed melengkapi kebutuhan bootstrap dan data awal. Dump SQL yang pernah disertakan adalah snapshot historis untuk referensi atau pemulihan, bukan sumber skema utama aplikasi.
+
+Entitas yang digunakan oleh implementasi aktif meliputi `users`, `angkatan`, `grup_mahasiswa`, `kelas`, `mata_kuliah`, `peserta_kelas`, `jadwal`, `sesi_kuliah`, `absensi`, `periode_akademik`, `activity_logs`, serta tabel pendukung reset password, refresh token, pengajuan absensi, dan pengaturan aplikasi sesuai migration/bootstrap yang tersedia.
+
+### 6.2 Snapshot SQL historis
+
+Dump [e_absensi_stikom (6).sql](<e_absensi_stikom%20(6).sql>) berasal dari MySQL 8.0.30 dan mendefinisikan delapan tabel berikut.
+
+| Tabel           | Kolom/aturan penting dari dump                                                                                                                            |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`         | Identitas unik (`nomor_induk`), peran `admin`/`dosen`/`mahasiswa`, hash kata sandi, status akademik, gender, jurusan, angkatan, waktu login dan pembuatan |
+| `angkatan`      | Nama angkatan unik; satu angkatan dapat memiliki banyak pengguna dan mata kuliah                                                                          |
+| `mata_kuliah`   | Kode mata kuliah unik, model `paket`/`kelompok`, SKS, dosen, angkatan, semester, jadwal, serta target pertemuan                                           |
+| `peserta_kelas` | Tabel penghubung mahasiswa dan mata kuliah untuk kelas kelompok/KRS                                                                                       |
+| `sesi_kuliah`   | Mata kuliah, dosen, tipe `offline`/`online`, tautan, status `berlangsung`/`selesai`, waktu, agenda, jenis, dan bobot sesi                                 |
+| `absensi`       | Penghubung pengguna, mata kuliah, dan (opsional) sesi; status `hadir`/`sakit`/`izin`/`alpa`                                                               |
+| `kehadiran`     | Tabel presensi lama/alternatif: mahasiswa, sesi, waktu scan, status `hadir`/`izin`/`sakit`/`alfa`                                                         |
 
 Dump menyediakan primary key untuk seluruh tabel, unique key pada `users.nomor_induk`, `angkatan.nama_angkatan`, dan `mata_kuliah.kode_mk`, serta foreign key yang menghapus data turunan saat pengguna atau mata kuliah dihapus. Penghapusan dosen atau angkatan pada mata kuliah mengosongkan referensinya (`SET NULL`).
 
-### 6.2 Kesesuaian dump dengan aplikasi
+### 6.3 Kesesuaian snapshot historis dengan aplikasi
 
-- Dump berisi data awal: 1 admin, beberapa dosen/mahasiswa, 4 angkatan, 3 mata kuliah, 1 sesi selesai, dan peserta untuk satu kelas kelompok.
-- Kode aktif menggunakan `absensi`, sedangkan `kehadiran` hanya dirujuk oleh query detail profil dosen. Status `alfa` pada tabel lama juga tidak konsisten dengan `alpa` pada tabel aktif.
-- Kode mahasiswa dan rekap memakai tabel `grup_mahasiswa`, tetapi tabel tersebut tidak terdapat dalam dump. Fitur kelompok tambahan membutuhkan migrasi untuk membuat tabel itu beserta foreign key/indeksnya.
-- Kode jadwal menyimpan kolom `ruangan` pada `mata_kuliah`, tetapi kolom tersebut tidak terdapat dalam dump. Fitur ruangan akan gagal sampai migrasi kolom dilakukan.
-- `absensi.sesi_id` pada dump belum memiliki foreign key maupun indeks, walaupun kode menjadikannya relasi inti. Tambahkan indeks dan foreign key ke `sesi_kuliah.id` untuk integritas serta performa rekap.
-- `sesi_kuliah.dosen_id` ada, namun dump belum memberinya foreign key ke `users`. Tambahkan foreign key jika dosen pembuat sesi harus selalu valid.
-- Dump tidak memiliki unique constraint gabungan pada `absensi(user_id, sesi_id)`. Backend telah mengecek duplikasi sebelum insert, tetapi constraint database tetap diperlukan untuk mencegah balapan request.
+- Dump berisi data awal dan struktur lama yang tidak selalu mencerminkan tabel tambahan pada migration aktif.
+- Kode aktif memakai `absensi` dan status `alpa`; tabel atau status lama seperti `kehadiran`/`alfa` tidak boleh dijadikan kontrak baru.
+- Saat melakukan pemulihan dari dump, jalankan migration setelah impor dan verifikasi indeks, foreign key, tabel kelas/periode/kelompok, serta constraint keunikan attendance sebelum aplikasi dijalankan.
 
 ## 7. Rencana pengembangan berikutnya
 
@@ -187,7 +206,7 @@ Seluruh kebutuhan pada bagian ini adalah target pengembangan setelah baseline sa
 
 ### 7.2 Sesi login, keamanan, dan sinkronisasi
 
-- Ganti token semu di frontend dengan access token JWT berdurasi pendek dan refresh token yang disimpan aman. Semua endpoint dilindungi autentikasi dan otorisasi berbasis peran.
+- Pertahankan access token JWT yang sudah digunakan saat ini, lalu tambahkan access token berdurasi pendek dan refresh token yang disimpan aman. Semua endpoint baru wajib dilindungi autentikasi dan otorisasi berbasis peran.
 - Sesi berakhir otomatis setelah **12 jam tidak ada aktivitas** dan, sebagai batas mutlak, maksimum **24 jam sejak login**. Aplikasi menampilkan peringatan satu menit sebelum logout otomatis.
 - Aktivitas yang memperpanjang sesi meliputi interaksi pengguna yang bermakna dan request API terautentikasi; polling otomatis halaman tidak boleh memperpanjang sesi.
 - Logout, penggantian kata sandi, reset kata sandi, dan penonaktifan akun mencabut refresh token dari semua perangkat yang sesuai.
@@ -196,7 +215,7 @@ Seluruh kebutuhan pada bagian ini adalah target pengembangan setelah baseline sa
 
 ### 7.3 Log aktivitas untuk admin
 
-- Tambahkan menu **Log Aktivitas** pada portal admin dengan tabel pencarian, filter pengguna/peran/jenis aksi/rentang tanggal, pagination, dan ekspor.
+- Lengkapi halaman **Log Aktivitas** yang sudah tersedia pada portal admin dengan pencarian, filter pengguna/peran/jenis aksi/rentang tanggal, pagination, dan ekspor.
 - Catat aktivitas autentikasi (login, logout, login gagal, reset password), perubahan profil, CRUD master data, impor/ekspor, perubahan jadwal/penugasan, buka/tutup sesi, scan QR, pengajuan izin/sakit, serta perubahan rekap manual.
 - Setiap entri menyimpan: waktu, pengguna pelaku (jika ada), peran, aksi, jenis dan ID entitas, ringkasan perubahan sebelum/sesudah yang disanitasi, alamat IP, user-agent, dan status berhasil/gagal.
 - Log bersifat append-only bagi aplikasi. Hanya admin berwenang yang dapat membaca; data sensitif seperti kata sandi, token, dan isi rahasia tidak boleh dicatat.
@@ -204,11 +223,11 @@ Seluruh kebutuhan pada bagian ini adalah target pengembangan setelah baseline sa
 
 ### 7.4 Pengaturan untuk setiap peran
 
-| Peran | Pengaturan yang diperlukan |
-| --- | --- |
-| Admin | Profil dan email, perubahan kata sandi, sesi/perangkat aktif, preferensi notifikasi, pengaturan masa sesi, konfigurasi lokasi/radius presensi, serta pengelolaan template email |
-| Dosen | Profil dan email, kata sandi, sesi/perangkat aktif, preferensi notifikasi jadwal/pengajuan izin, serta preferensi tampilan jadwal |
-| Mahasiswa | Profil dan email, kata sandi/reset, sesi/perangkat aktif, preferensi notifikasi, serta izin akses kamera/lokasi yang dapat diperiksa ulang |
+| Peran     | Pengaturan yang diperlukan                                                                                                                                                      |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Admin     | Profil dan email, perubahan kata sandi, sesi/perangkat aktif, preferensi notifikasi, pengaturan masa sesi, konfigurasi lokasi/radius presensi, serta pengelolaan template email |
+| Dosen     | Profil dan email, kata sandi, sesi/perangkat aktif, preferensi notifikasi jadwal/pengajuan izin, serta preferensi tampilan jadwal                                               |
+| Mahasiswa | Profil dan email, kata sandi/reset, sesi/perangkat aktif, preferensi notifikasi, serta izin akses kamera/lokasi yang dapat diperiksa ulang                                      |
 
 Pengaturan sensitif—email, kata sandi, lokasi/radius, dan masa sesi—memerlukan validasi backend serta dicatat pada log aktivitas. Konfigurasi global admin memakai tabel pengaturan agar tidak perlu mengubah kode sumber.
 
@@ -261,32 +280,33 @@ Pengaturan sensitif—email, kata sandi, lokasi/radius, dan masa sesi—memerluk
 
 ## 9. API yang tersedia
 
-| Area | Endpoint utama |
-| --- | --- |
-| Autentikasi | `POST /api/auth/login` |
-| Dashboard | `GET /api/dashboard/stats`, `/ranking`, `/logs` |
-| Mahasiswa | CRUD `/api/mahasiswa`, impor `/bulk`, penugasan/operasi massal |
-| Dosen | CRUD `/api/dosen`, impor `/bulk`, detail dan reset riwayat |
-| Angkatan | CRUD `/api/angkatan` |
-| Mata kuliah | CRUD `/api/matkul`, penugasan dan peserta kelas |
-| Jadwal/sesi | `GET /api/jadwal`, `POST /buka-sesi`, `PUT /tutup-sesi/:id`, jadwal mahasiswa |
-| Absensi | `POST /api/absensi/scan`, riwayat dosen, detail sesi, rekap manual |
-| Rekap | `GET /api/rekap/mahasiswa`, `GET /api/rekap/dosen` |
+| Area        | Endpoint utama                                                                               |
+| ----------- | -------------------------------------------------------------------------------------------- |
+| Autentikasi | `POST /api/auth/login`, `GET /api/auth/profile`, `GET /api/auth/activity`                    |
+| Dashboard   | `GET /api/dashboard/stats`, `/ranking`, `/logs`                                              |
+| Mahasiswa   | CRUD `/api/mahasiswa`, impor `/bulk`, penugasan/operasi massal                               |
+| Dosen       | CRUD `/api/dosen`, impor `/bulk`, detail dan reset riwayat                                   |
+| Angkatan    | CRUD `/api/angkatan`                                                                         |
+| Kelas       | CRUD dan pengelolaan peserta melalui `/api/kelas`                                            |
+| Mata kuliah | CRUD `/api/matkul`, penugasan dan peserta kelas                                              |
+| Periode     | CRUD `/api/periode`                                                                          |
+| Jadwal/sesi | `GET /api/jadwal`, buka/tutup sesi, jadwal mahasiswa, dan `DELETE /api/jadwal/sesi/:sesi_id` |
+| Absensi     | `POST /api/absensi/scan`, riwayat dosen, detail sesi, rekap manual                           |
+| Rekap       | `GET /api/rekap/mahasiswa`, `GET /api/rekap/dosen`                                           |
 
 ## 10. Batasan dan backlog prioritas
 
 Bagian ini memisahkan kebutuhan/rancangan dari perilaku yang benar-benar tersedia saat ini.
 
-- JWT tercantum sebagai dependensi dan token disimpan oleh frontend, tetapi login belum menerbitkan JWT dan route API belum memakai middleware autentikasi maupun otorisasi peran.
-- Belum ada rate limiting atau perlindungan brute-force pada endpoint login.
+- JWT dan middleware autentikasi/otorisasi peran sudah tersedia pada route utama; refresh token, revocation server-side, dan timeout berbasis aktivitas masih backlog.
+- `authLimiter` sudah terkonfigurasi tetapi belum dipasang pada route login; perlindungan brute-force belum efektif.
 - Presensi sesi daring saat ini hanya mengubah status di antarmuka dan membuka tautan; tidak ada panggilan API untuk menyimpan kehadiran.
 - Dashboard menampilkan kartu “Kehadiran Harian”, tetapi backend statistik belum menghitung `rata_kehadiran`.
-- Router tingkat atas hanya mendeklarasikan rute login dan dashboard utama; menu admin dirender di dalam dashboard, sementara beberapa rute admin yang dideklarasikan tidak memakai layout/sidebar.
-- Tidak ada pemeriksaan backend bahwa `mahasiswa_id` adalah peserta mata kuliah sebelum scan QR; validasi ini perlu ditambahkan.
+- Router frontend menyediakan halaman login, dashboard admin, mahasiswa, dosen, serta halaman admin mahasiswa/dosen/mata kuliah; menu lain seperti periode dan kelas belum memiliki halaman UI mandiri.
+- Validasi kepesertaan kelas pada alur scan harus dipertahankan sebagai acceptance check dan diverifikasi terhadap implementasi backend saat perubahan attendance berikutnya.
 - QR bersifat deterministik berdasarkan ID mata kuliah, bukan token sesi yang berubah-ubah. Untuk mitigasi titip absen yang lebih kuat, gunakan token QR per sesi dengan masa berlaku pendek.
 - Radius implementasi 10 meter, bukan 50 meter seperti rancangan awal.
-- Belum terlihat migrasi/skema database yang dapat dijalankan; `backend/scripts/initDb.js` kosong.
-- Dump SQL tersedia sebagai snapshot, tetapi belum selaras penuh dengan skema yang diasumsikan kode (terutama `grup_mahasiswa` dan `mata_kuliah.ruangan`).
+- Migration Knex dan bootstrap database sudah tersedia serta menjadi sumber skema aktif; dump SQL tetap merupakan snapshot historis.
 - Fitur pengaturan akun admin dan reset kata sandi belum terhubung ke backend.
 
 ## 11. Kriteria penerimaan inti

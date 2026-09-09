@@ -3,7 +3,7 @@ const router = express.Router();
 const { verifyToken, verifyRole } = require('../middlewares/authMiddleware');
 const { 
   getAllMahasiswa, getMahasiswaById, createMahasiswa, updateMahasiswa, deleteMahasiswa, 
-  bulkCreateMahasiswa, bulkAssignAngkatan, bulkAssignKelas, bulkDeleteMahasiswa, bulkEditJurusan, removeAngkatan, removeKelas
+  bulkCreateMahasiswa, bulkAssignAngkatan, bulkAssignKelas, bulkUpdateStatusAngkatan, bulkDeleteMahasiswa, bulkEditJurusan, removeAngkatan, removeKelas
 } = require('../controllers/mahasiswaController');
 
 router.use(verifyToken, verifyRole('admin'));
@@ -13,6 +13,7 @@ router.post('/', createMahasiswa);
 router.post('/bulk', bulkCreateMahasiswa);      
 router.put('/bulk-assign-angkatan', bulkAssignAngkatan); 
 router.put('/bulk-assign-kelas', bulkAssignKelas);
+router.put('/bulk-update-status-angkatan', bulkUpdateStatusAngkatan);
 
 router.post('/remove-angkatan', removeAngkatan);
 router.post('/remove-kelas', removeKelas);

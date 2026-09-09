@@ -15,13 +15,13 @@ class AbsensiRepository {
     const query = `
       SELECT mk.id 
       FROM mata_kuliah mk
-      LEFT JOIN users u ON u.angkatan_id = mk.angkatan_id AND mk.jenis_kelas = 'paket' AND u.id = ?
+      LEFT JOIN users u ON u.id = ? AND u.role = 'mahasiswa' AND mk.jenis_kelas = 'paket'
+        AND ((mk.kelas_id IS NOT NULL AND u.kelas_id = mk.kelas_id) OR (mk.kelas_id IS NULL AND u.angkatan_id = mk.angkatan_id))
       LEFT JOIN peserta_kelas pk ON pk.mk_id = mk.id AND mk.jenis_kelas = 'kelompok' AND pk.mahasiswa_id = ?
-      LEFT JOIN grup_mahasiswa gm ON gm.mk_id = mk.id AND gm.mahasiswa_id = ?
       WHERE mk.id = ? 
-        AND (u.id IS NOT NULL OR pk.mahasiswa_id IS NOT NULL OR gm.mahasiswa_id IS NOT NULL)
+        AND (u.id IS NOT NULL OR pk.mahasiswa_id IS NOT NULL)
     `;
-    const [results] = await db.query(query, [mahasiswa_id, mahasiswa_id, mahasiswa_id, mk_id]);
+    const [results] = await db.query(query, [mahasiswa_id, mahasiswa_id, mk_id]);
     return results.length > 0;
   }
   
@@ -52,30 +52,42 @@ class AbsensiRepository {
     const [sesi] = await db.query("SELECT mk_id FROM sesi_kuliah WHERE id = ?", [sesi_id]);
     return sesi.length ? sesi[0].mk_id : null;
   }
+
+  async getSesiInfo(sesi_id) {
+    const [sesi] = await db.query('SELECT id, mk_id, dosen_id, status FROM sesi_kuliah WHERE id = ?', [sesi_id]);
+    return sesi[0] || null;
+  }
   
   async getMkInfo(mk_id) {
     const [mk] = await db.query("SELECT jenis_kelas, angkatan_id FROM mata_kuliah WHERE id = ?", [mk_id]);
     return mk.length ? mk[0] : null;
   }
   
-  async getMahasiswaPaket(angkatan_id, mk_id) {
+  async getMahasiswaPaket(mk_id) {
     const query = `
-      SELECT id, nomor_induk, nama_lengkap, jurusan FROM users 
-      WHERE role='mahasiswa' AND angkatan_id=? 
-      UNION 
-      SELECT u.id, u.nomor_induk, u.nama_lengkap, u.jurusan 
-      FROM grup_mahasiswa gm 
-      JOIN users u ON gm.mahasiswa_id = u.id 
-      WHERE gm.mk_id=?
-      ORDER BY nama_lengkap ASC
+      SELECT u.id, u.nomor_induk, u.nama_lengkap, u.jurusan
+      FROM mata_kuliah mk
+      JOIN users u ON u.role = 'mahasiswa'
+        AND ((mk.kelas_id IS NOT NULL AND u.kelas_id = mk.kelas_id) OR (mk.kelas_id IS NULL AND u.angkatan_id = mk.angkatan_id))
+      WHERE mk.id = ?
+      ORDER BY u.nama_lengkap ASC
     `;
-    const [mahasiswa] = await db.query(query, [angkatan_id, mk_id]);
+    const [mahasiswa] = await db.query(query, [mk_id]);
     return mahasiswa;
   }
   
   async getMahasiswaLintas(mk_id) {
     const [mahasiswa] = await db.query("SELECT u.id, u.nomor_induk, u.nama_lengkap, u.jurusan FROM peserta_kelas pk JOIN users u ON pk.mahasiswa_id = u.id WHERE pk.mk_id = ? ORDER BY u.nama_lengkap ASC", [mk_id]);
     return mahasiswa;
+  }
+
+  async getPesertaIds(mk_id) {
+    const mk = await this.getMkInfo(mk_id);
+    if (!mk) return new Set();
+    const peserta = mk.jenis_kelas === 'paket'
+      ? await this.getMahasiswaPaket(mk_id)
+      : await this.getMahasiswaLintas(mk_id);
+    return new Set(peserta.map((mahasiswa) => Number(mahasiswa.id)));
   }
   
   async getAbsensiSesi(sesi_id) {

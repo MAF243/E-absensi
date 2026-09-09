@@ -2,6 +2,25 @@ const bcrypt = require('bcrypt');
 const db = require('../config/db');
 const userRepository = require('../repositories/userRepository');
 
+const ACADEMIC_STATUSES = new Set(['AKTIF', 'CUTI', 'LULUS', 'KELUAR', 'RESIGN']);
+
+const normalizeAcademicStatus = (value) => {
+  const normalized = String(value || 'AKTIF').trim().toUpperCase();
+  // Backward compatibility for forms and records created before the domain
+  // glossary replaced the technical "tidak aktif" value.
+  const status = normalized === 'TIDAK AKTIF' ? 'KELUAR' : normalized;
+  if (!ACADEMIC_STATUSES.has(status)) {
+    const error = new Error('Status akademik tidak valid.');
+    error.statusCode = 400;
+    throw error;
+  }
+  return status;
+};
+
+const normalizeDosenStatus = (value) => {
+  return String(value || 'AKTIF').trim().toUpperCase() === 'AKTIF' ? 'AKTIF' : 'KELUAR';
+};
+
 class UserService {
   async getAll(role) {
     return await userRepository.findAllByRole(role);
@@ -19,6 +38,8 @@ class UserService {
 
   async create(data) {
     try {
+      if (data.role === 'dosen') data.status_akademik = normalizeDosenStatus(data.status_akademik);
+      data.status_akademik = normalizeAcademicStatus(data.status_akademik);
       if (data.role === 'mahasiswa' && data.nomor_induk && data.nomor_induk.length >= 8) {
          const kodeProdi = data.nomor_induk.substring(2, 4);
          const kodeAngkatan = data.nomor_induk.substring(4, 6);
@@ -65,6 +86,8 @@ class UserService {
 
   async update(id, data) {
     try {
+      if (data.role === 'dosen') data.status_akademik = normalizeDosenStatus(data.status_akademik);
+      data.status_akademik = normalizeAcademicStatus(data.status_akademik);
       if (data.password && data.password.trim() !== "") {
         data.password = await bcrypt.hash(data.password, 10);
       } else {
@@ -82,6 +105,22 @@ class UserService {
         error.statusCode = 400;
         throw error;
       }
+      throw err;
+    }
+  }
+
+  async updateOwnDosenProfile(id, data) {
+    const payload = {
+      nomor_induk: data.nomor_induk,
+      nama_lengkap: data.nama_lengkap,
+    };
+    if (data.password && data.password.trim() !== '') {
+      payload.password = await bcrypt.hash(data.password, 10);
+    }
+    const updated = await userRepository.updateOwnDosenProfile(id, payload);
+    if (!updated) {
+      const err = new Error('Data dosen tidak ditemukan atau tidak ada perubahan.');
+      err.statusCode = 404;
       throw err;
     }
   }
@@ -107,6 +146,8 @@ class UserService {
     try {
       const values = [];
       for (let row of data) {
+        if (role === 'dosen') row.status_akademik = normalizeDosenStatus(row.status_akademik);
+        row.status_akademik = normalizeAcademicStatus(row.status_akademik);
         if (role === 'mahasiswa' && row.nomor_induk && row.nomor_induk.length >= 8) {
            const kodeProdi = row.nomor_induk.substring(2, 4);
            const kodeAngkatan = row.nomor_induk.substring(4, 6);
@@ -139,7 +180,7 @@ class UserService {
 
         const plainPassword = row.password || row.nomor_induk;
         const hashedPassword = await bcrypt.hash(plainPassword.toString(), 10);
-        values.push([row.nomor_induk, row.nama_lengkap, hashedPassword, role, row.status_akademik || 'aktif', row.jenis_kelamin || null, row.jurusan || null, row.angkatan_id || null, row.kelas_id || null]);
+        values.push([row.nomor_induk, row.nama_lengkap, hashedPassword, role, row.status_akademik, row.jenis_kelamin || null, row.jurusan || null, row.angkatan_id || null, row.kelas_id || null]);
       }
       await userRepository.bulkCreate(values);
     } catch (err) {
@@ -162,6 +203,11 @@ class UserService {
     return `${studentIds.length} mahasiswa berhasil dipindahkan ke angkatan ini!`;
   }
 
+  async updateStatusAngkatan(studentIds, status_akademik, angkatan_id) {
+    const status = status_akademik ? normalizeAcademicStatus(status_akademik) : null;
+    await userRepository.bulkUpdateStatusAngkatan(studentIds, status, angkatan_id);
+    return `${studentIds.length} mahasiswa berhasil diperbarui.`;
+  }
   async removeKelas(mahasiswa_id) {
     await userRepository.removeKelas(mahasiswa_id);
   }

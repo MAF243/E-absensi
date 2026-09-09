@@ -6,13 +6,15 @@ class JadwalRepository {
     await db.query(`UPDATE sesi_kuliah SET status = 'selesai', waktu_selesai = NOW() WHERE status = 'berlangsung' AND DATE(waktu_mulai) < CURDATE()`);
   }
 
-  async getJadwal() {
+  async getJadwal(dosenId = null) {
+    const whereClause = dosenId ? 'WHERE m.dosen_id = ?' : '';
     const query = `
-      SELECT m.id, m.kode_mk, m.nama_mk, m.semester, m.hari, m.dosen_id, m.jurusan, m.jenis_kelas, m.target_pertemuan, m.ruangan,
+      SELECT m.id, m.kode_mk, m.nama_mk, m.semester, m.hari, m.dosen_id, m.jurusan, m.jenis_kelas, m.kelas_id, m.target_pertemuan, m.ruangan,
              DATE_FORMAT(m.jam_mulai, '%H:%i') as jam_mulai, 
              DATE_FORMAT(m.jam_selesai, '%H:%i') as jam_selesai,
              u.nama_lengkap AS dosen_nama,
              a.nama_angkatan,
+             k.nama_kelas,
              (
                 SELECT GROUP_CONCAT(DISTINCT usr.jurusan SEPARATOR ', ')
                 FROM peserta_kelas pk
@@ -26,10 +28,12 @@ class JadwalRepository {
       FROM mata_kuliah m
       LEFT JOIN users u ON m.dosen_id = u.id
       LEFT JOIN angkatan a ON m.angkatan_id = a.id
+      LEFT JOIN kelas k ON m.kelas_id = k.id
       LEFT JOIN sesi_kuliah s ON s.mk_id = m.id AND s.status = 'berlangsung'
+      ${whereClause}
       ORDER BY m.semester ASC, m.nama_mk ASC
     `;
-    const [results] = await db.query(query);
+    const [results] = await db.query(query, dosenId ? [dosenId] : []);
     return results;
   }
 
@@ -44,7 +48,7 @@ class JadwalRepository {
 
   async checkMk(mk_id) {
     const query = `
-      SELECT hari, jam_mulai, jam_selesai,
+      SELECT dosen_id, hari, jam_mulai, jam_selesai,
         CASE WHEN hari = (
           CASE DAYOFWEEK(CURDATE())
             WHEN 1 THEN 'Minggu' WHEN 2 THEN 'Senin' WHEN 3 THEN 'Selasa'
@@ -81,9 +85,14 @@ class JadwalRepository {
     await db.query("UPDATE sesi_kuliah SET status = 'selesai', waktu_selesai = NOW() WHERE id = ?", [sesi_id]);
   }
 
+  async getSesiInfo(sesi_id) {
+    const [results] = await db.query('SELECT id, mk_id, dosen_id, status FROM sesi_kuliah WHERE id = ?', [sesi_id]);
+    return results[0] || null;
+  }
+
   // Safe delete logic: Batalkan Sesi
   async checkSesiPresence(sesi_id) {
-    const [results] = await db.query("SELECT COUNT(*) as count FROM kehadiran WHERE sesi_id = ?", [sesi_id]);
+    const [results] = await db.query("SELECT COUNT(*) as count FROM absensi WHERE sesi_id = ?", [sesi_id]);
     return results[0].count > 0;
   }
 
@@ -97,9 +106,10 @@ class JadwalRepository {
   }
 
   async getJadwalByMahasiswa(mahasiswa_id) {
-    const [mhs] = await db.query("SELECT angkatan_id FROM users WHERE id = ?", [mahasiswa_id]);
+    const [mhs] = await db.query("SELECT angkatan_id, kelas_id FROM users WHERE id = ? AND role = 'mahasiswa'", [mahasiswa_id]);
     if (mhs.length === 0) return null;
-    const angkatan_id = mhs[0].angkatan_id || 0; 
+    const angkatan_id = mhs[0].angkatan_id || 0;
+    const kelas_id = mhs[0].kelas_id || 0;
 
     const query = `
       SELECT m.id, m.kode_mk, m.nama_mk, m.semester, m.hari, m.dosen_id, m.jurusan, m.jenis_kelas, m.ruangan,
@@ -112,13 +122,13 @@ class JadwalRepository {
       LEFT JOIN users u ON m.dosen_id = u.id
       LEFT JOIN angkatan a ON m.angkatan_id = a.id
       LEFT JOIN sesi_kuliah s ON s.mk_id = m.id AND s.status = 'berlangsung'
-      WHERE (m.jenis_kelas = 'paket' AND m.angkatan_id = ?)
+        WHERE (m.jenis_kelas = 'paket' AND ((m.kelas_id IS NOT NULL AND m.kelas_id = ?) OR (m.kelas_id IS NULL AND m.angkatan_id = ?) OR (m.kelas_id IS NULL AND m.jurusan = (SELECT jurusan FROM users WHERE id = ?))))
          OR (m.jenis_kelas = 'kelompok' AND EXISTS (
              SELECT 1 FROM peserta_kelas pk WHERE pk.mk_id = m.id AND pk.mahasiswa_id = ?
          ))
       ORDER BY m.jam_mulai ASC
     `;
-    const [results] = await db.query(query, [angkatan_id, mahasiswa_id]);
+    const [results] = await db.query(query, [kelas_id, angkatan_id, mahasiswa_id, mahasiswa_id]);
     return results;
   }
 }

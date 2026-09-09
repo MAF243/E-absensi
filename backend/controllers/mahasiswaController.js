@@ -65,6 +65,15 @@ const bulkAssignKelas = async (req, res, next) => {
     res.json({ success: true, message: msg });
   
 };
+const bulkUpdateStatusAngkatan = async (req, res, next) => {
+  const { studentIds, status_akademik, angkatan_id } = req.body;
+  if (!studentIds || !studentIds.length) throw new AppError("Tidak ada mahasiswa yang dipilih.", 400);
+  if (!status_akademik && (angkatan_id === undefined || angkatan_id === '')) {
+    throw new AppError("Pilih status atau angkatan yang akan diperbarui.", 400);
+  }
+  const msg = await userService.updateStatusAngkatan(studentIds, status_akademik, angkatan_id);
+  res.json({ success: true, message: msg });
+};
 
 const removeKelas = async (req, res, next) => {
   await userService.removeKelas(req.body.mahasiswa_id);
@@ -95,5 +104,5 @@ const bulkEditJurusan = async (req, res, next) => {
 
 module.exports = {
   getAllMahasiswa, getMahasiswaById, createMahasiswa, updateMahasiswa, deleteMahasiswa,
-  bulkCreateMahasiswa, bulkAssignAngkatan, bulkAssignKelas, bulkDeleteMahasiswa, bulkEditJurusan, removeAngkatan, removeKelas
+  bulkCreateMahasiswa, bulkAssignAngkatan, bulkAssignKelas, bulkUpdateStatusAngkatan, bulkDeleteMahasiswa, bulkEditJurusan, removeAngkatan, removeKelas
 };

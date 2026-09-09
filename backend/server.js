@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
+const cron = require('node-cron');
+const activityLogger = require('./middlewares/activityLogger');
 require('dotenv').config();
 
 const app = express();
@@ -39,6 +41,7 @@ const authLimiter = rateLimit({
 });
 
 app.use(express.json());
+app.use(activityLogger);
 
 // ==========================================
 // IMPORT ROUTES
@@ -54,6 +57,7 @@ const jadwalRoutes = require('./routes/jadwalRoutes');
 const absensiRoutes = require('./routes/absensiRoutes');
 const rekapRoutes = require('./routes/rekapRoutes');
 const periodeRoutes = require('./routes/periodeRoutes');
+const jadwalService = require('./services/jadwalService');
 
 // ==========================================
 // GUNAKAN ROUTES
@@ -101,6 +105,16 @@ app.use('/api/jadwal', jadwalRoutes);
 app.use('/api/absensi', absensiRoutes);
 app.use('/api/rekap', rekapRoutes);
 app.use('/api/periode', periodeRoutes);
+
+// Background work belongs to the application entry point, not a request
+// controller. This lets controllers remain side-effect free and testable.
+cron.schedule('* * * * *', async () => {
+  try {
+    await jadwalService.closeExpiredSessions();
+  } catch (error) {
+    console.error('Gagal menutup sesi kedaluwarsa:', error.message);
+  }
+});
 
 // ==========================================
 // ERROR HANDLER GLOBAL

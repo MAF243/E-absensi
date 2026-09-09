@@ -133,7 +133,7 @@ const ModalMataKuliah = ({ isOpen, onClose, onSave, editData, dosenList, angkata
                   onChange={(e) => setFormData({...formData, dosen_id: e.target.value})}
                 >
                   <option value="">-- Pilih Dosen Pengampu --</option>
-                  {dosenList.filter(d => String(d.status_akademik).toLowerCase() !== 'tidak aktif').map(dosen => (
+                  {dosenList.filter(d => String(d.status_akademik || 'AKTIF').toUpperCase() === 'AKTIF').map(dosen => (
                     <option key={dosen.id} value={dosen.id}>{dosen.nama_lengkap} ({dosen.nomor_induk})</option>
                   ))}
                 </select>

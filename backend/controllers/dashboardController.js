@@ -6,9 +6,9 @@ const getStats = async (req, res) => {
   const query = `
       SELECT 
         (SELECT COUNT(*) FROM users WHERE role = 'mahasiswa') AS total_mahasiswa,
-        (SELECT COUNT(*) FROM users WHERE role = 'mahasiswa' AND status_akademik = 'aktif') AS mhs_aktif,
-        (SELECT COUNT(*) FROM users WHERE role = 'mahasiswa' AND status_akademik = 'cuti') AS mhs_cuti,
-        (SELECT COUNT(*) FROM users WHERE role = 'mahasiswa' AND status_akademik = 'tidak aktif') AS mhs_tidak_aktif,
+        (SELECT COUNT(*) FROM users WHERE role = 'mahasiswa' AND UPPER(status_akademik) = 'AKTIF') AS mhs_aktif,
+        (SELECT COUNT(*) FROM users WHERE role = 'mahasiswa' AND UPPER(status_akademik) = 'CUTI') AS mhs_cuti,
+        (SELECT COUNT(*) FROM users WHERE role = 'mahasiswa' AND UPPER(status_akademik) IN ('LULUS', 'KELUAR', 'RESIGN')) AS mhs_tidak_aktif,
         (SELECT COUNT(*) FROM users WHERE role = 'dosen') AS total_dosen,
         (SELECT COUNT(*) FROM mata_kuliah) AS total_matkul
     `;

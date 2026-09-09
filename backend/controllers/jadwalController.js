@@ -1,10 +1,8 @@
 const AppError = require('../utils/AppError');
-const cron = require('node-cron');
 const jadwalService = require('../services/jadwalService');
-const db = require('../config/db');
 
 const getJadwal = async (req, res, next) => {
-  const data = await jadwalService.getJadwal();
+  const data = await jadwalService.getJadwal(req.user);
   res.json({ success: true, data });
 };
 
@@ -19,12 +17,12 @@ const resetJadwal = async (req, res, next) => {
 };
 
 const bukaSesi = async (req, res, next) => {
-  await jadwalService.bukaSesi({ mk_id: req.params.id, ...req.body });
+  await jadwalService.bukaSesi({ mk_id: req.params.id, ...req.body }, req.user);
   res.json({ success: true, message: "Sesi kelas berhasil DIBUKA!" });
 };
 
 const tutupSesi = async (req, res, next) => {
-  await jadwalService.tutupSesi(req.params.sesi_id);
+  await jadwalService.tutupSesi(req.params.sesi_id, req.user);
   res.json({ success: true, message: "Sesi kelas berhasil DITUTUP!" });
 };
 
@@ -34,16 +32,11 @@ const batalkanSesi = async (req, res, next) => {
 };
 
 const getJadwalByMahasiswa = async (req, res, next) => {
-  const data = await jadwalService.getJadwalByMahasiswa(req.params.mahasiswa_id);
+  if (Number(req.params.mahasiswa_id) !== Number(req.user.id)) {
+    throw new AppError('Anda hanya dapat melihat jadwal sendiri.', 403);
+  }
+  const data = await jadwalService.getJadwalByMahasiswa(req.user.id);
   res.json({ success: true, data });
 };
-
-// 7. ROBOT CRON JOB
-cron.schedule('* * * * *', async () => {
-  try {
-    await db.query(`UPDATE sesi_kuliah sk JOIN mata_kuliah mk ON sk.mk_id = mk.id SET sk.status = 'selesai', sk.waktu_selesai = NOW() WHERE sk.status = 'berlangsung' AND DATE(sk.waktu_mulai) = CURDATE() AND CURTIME() > mk.jam_selesai`);
-    await db.query(`UPDATE sesi_kuliah SET status = 'selesai', waktu_selesai = NOW() WHERE status = 'berlangsung' AND DATE(waktu_mulai) < CURDATE()`);
-  } catch (error) {}
-});
 
 module.exports = { getJadwal, updateJadwal, resetJadwal, bukaSesi, tutupSesi, batalkanSesi, getJadwalByMahasiswa };

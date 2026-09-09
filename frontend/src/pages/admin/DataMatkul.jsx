@@ -4,13 +4,6 @@ import DataTable from '../../components/common/DataTable';
 import axiosClient from '../../utils/axiosClient';
 import useUiStore from '../../store/useUiStore';
 
-const isKelompok = (name) => {
-  if (!name) return false;
-  const n = String(name).toUpperCase();
-  if (n.includes('INFORMATIKA') || n.includes('INROMATIKA')) return false;
-  return true;
-};
-
 // ==========================================
 // CUSTOM SEARCHABLE DROPDOWN
 // ==========================================
@@ -104,12 +97,14 @@ const ModalMasterMatkul = ({ isOpen, onClose, onSave, editData, mahasiswaList })
   useEffect(() => {
     if (isOpen) {
       if (editData) {
-        // Ambil jurusan dari DB sebagai fallback awal
+        // Ambil jurusan dari target plotting yang tersimpan.
         let syncJurusan = editData.jurusan && editData.jurusan !== '-' ? editData.jurusan : '';
         
         // PAKSA JALANKAN LOGIKA CERDAS: Override/Timpa data jurusan lama di database
-        if (editData.jenis_kelas === 'kelompok' && editData.kelompok_jurusan) {
-          syncJurusan = editData.kelompok_jurusan;
+        if (editData.jenis_kelas === 'kelompok' && editData.kelas_id && mahasiswaList) {
+          const mhsInKelas = mahasiswaList.filter(m => String(m.kelas_id) === String(editData.kelas_id));
+          const uniqueJrs = [...new Set(mhsInKelas.map(m => m.jurusan ? String(m.jurusan).toUpperCase() : '').filter(Boolean))];
+          if (uniqueJrs.length > 0) syncJurusan = uniqueJrs.join(', ');
         } else if (editData.jenis_kelas === 'paket' && editData.angkatan_id && mahasiswaList) {
           const mhsInAngkatan = mahasiswaList.filter(m => 
             String(m.angkatan_id) === String(editData.angkatan_id) || 
@@ -134,7 +129,7 @@ const ModalMasterMatkul = ({ isOpen, onClose, onSave, editData, mahasiswaList })
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in" onClick={onClose}>
-      <div className="bg-white w-full max-w-lg rounded-[32px] p-6 md:p-8 shadow-2xl relative animate-in zoom-in-95 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="bg-white w-full max-w-2xl rounded-[32px] p-6 md:p-10 shadow-2xl relative animate-in zoom-in-95 max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-5 right-5 md:top-6 md:right-6 p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-xl transition-all active:scale-95"><X size={20} strokeWidth={2.5}/></button>
         <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight mb-6 flex items-center gap-3">
           <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><Library size={24} strokeWidth={2.5}/></div>
@@ -168,9 +163,9 @@ const ModalMasterMatkul = ({ isOpen, onClose, onSave, editData, mahasiswaList })
           </div>
           
           <div>
-            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Target Jurusan Utama</label>
-            <input type="text" placeholder="Cth: APQ, ADM, ITK" className="w-full border border-indigo-200 rounded-2xl px-4 py-3.5 outline-none focus:border-indigo-400 uppercase font-black tracking-wider text-indigo-700 bg-indigo-50/50 text-sm transition-all placeholder:text-indigo-300" value={formData.jurusan} onChange={e => setFormData({...formData, jurusan: e.target.value.toUpperCase()})} />
-            <p className="text-[10px] font-bold text-slate-400 mt-2.5 italic leading-relaxed">* Terisi otomatis dan menyesuaikan dengan daftar mahasiswa jika kelas telah di-plot.</p>
+            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Jurusan / Kelompok</label>
+            <input type="text" placeholder="Cth: APQ, ADM, ITK" className="w-full border border-indigo-200 rounded-2xl px-4 py-3.5 outline-none focus:border-indigo-400 uppercase font-medium tracking-wider text-indigo-700 bg-indigo-50/50 text-sm transition-all placeholder:text-indigo-300" value={formData.jurusan} onChange={e => setFormData({...formData, jurusan: e.target.value.toUpperCase()})} />
+            <p className="text-[10px] font-medium text-slate-400 mt-2.5 italic leading-relaxed">Untuk Kelas Kelompok, jurusan terisi otomatis dari anggota kelas yang dipilih.</p>
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-slate-100 mt-6">
@@ -186,26 +181,23 @@ const ModalMasterMatkul = ({ isOpen, onClose, onSave, editData, mahasiswaList })
 // ==========================================
 // 2. KOMPONEN MODAL: PLOTTING MATKUL
 // ==========================================
-const ModalAssignMatkul = ({ isOpen, onClose, onSave, mkData, dosenList, angkatanList, mahasiswaList }) => {
-  const [formData, setFormData] = useState({ dosen_id: '', angkatan_id: '', jenis_kelas: 'paket', peserta: [] });
+const ModalAssignMatkul = ({ isOpen, onClose, onSave, mkData, dosenList, kelasList, mahasiswaList }) => {
+  const [formData, setFormData] = useState({ dosen_id: '', kelas_id: '', jurusan: '', jenis_kelas: 'kelompok', peserta: [] });
   const [filterJurusan, setFilterJurusan] = useState('');
   const [searchMhs, setSearchMhs] = useState('');
 
-  const activeMhs = mahasiswaList.filter(m => String(m.status_akademik).toLowerCase() !== 'cuti' && String(m.status_akademik).toLowerCase() !== 'tidak aktif');
+  const activeMhs = mahasiswaList.filter(m => String(m.status_akademik || 'AKTIF').toUpperCase() === 'AKTIF');
   const uniqueJurusan = [...new Set(activeMhs.map(item => String(item.jurusan).toUpperCase()).filter(Boolean))];
 
   const dosenOptions = dosenList.filter(d => String(d.status_akademik).toLowerCase() === 'aktif').map(d => ({ id: d.id, label: d.nama_lengkap }));
   
-  const angkatanGroups = [
-    { icon: '🎓', label: 'Angkatan Reguler', options: angkatanList.filter(a => !isKelompok(a.nama_angkatan)).map(a => ({ id: a.id, label: a.nama_angkatan })) },
-    { icon: '🧩', label: 'Kelompok Kelas (Gabungan)', options: angkatanList.filter(a => isKelompok(a.nama_angkatan)).map(a => ({ id: a.id, label: a.nama_angkatan })) }
-  ];
+  const kelasOptions = kelasList.map(k => ({ id: k.id, label: k.nama_kelas }));
 
   useEffect(() => {
     if (!isOpen) { setSearchMhs(''); setFilterJurusan(''); return; }
-    setFormData({ dosen_id: mkData?.dosen_id || '', angkatan_id: mkData?.angkatan_id || '', jenis_kelas: mkData?.jenis_kelas || 'paket', peserta: [] });
+    setFormData({ dosen_id: mkData?.dosen_id || '', kelas_id: mkData?.kelas_id || '', jurusan: mkData?.jurusan || '', jenis_kelas: mkData?.jenis_kelas === 'kelompok' ? 'kelompok' : 'paket', peserta: [] });
 
-    if (mkData?.jenis_kelas === 'kelompok') {
+    if (mkData?.jenis_kelas === 'lintas') {
       axiosClient.get(`/matkul/${mkData.id}/peserta`)
         .then(r => r.data)
         .then(data => { if (data.success && data.data.length > 0) setFormData(prev => ({...prev, peserta: data.data})); }).catch(e => {});
@@ -231,7 +223,7 @@ const ModalAssignMatkul = ({ isOpen, onClose, onSave, mkData, dosenList, angkata
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in" onClick={onClose}>
-      <div className="bg-white w-full max-w-2xl rounded-[32px] p-6 md:p-8 shadow-2xl relative animate-in zoom-in-95 min-h-[65vh] max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-white w-full max-w-4xl rounded-[32px] p-6 md:p-10 shadow-2xl relative animate-in zoom-in-95 min-h-[70vh] max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-5 right-5 md:top-6 md:right-6 p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-xl transition-all active:scale-95"><X size={20} strokeWidth={2.5}/></button>
         
         <div className="mb-6 border-b border-slate-100 pb-5 pr-8 shrink-0">
@@ -250,26 +242,33 @@ const ModalAssignMatkul = ({ isOpen, onClose, onSave, mkData, dosenList, angkata
 
           <div className="relative z-10">
             <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Jenis Kelas</label>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <label className={`flex-1 flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all hover:-translate-y-0.5 ${formData.jenis_kelas === 'paket' ? 'bg-blue-50/50 border-blue-500 text-blue-800 shadow-md shadow-blue-500/10' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50 text-slate-600 shadow-sm'}`}>
-                <input type="radio" name="jenis_kelas" value="paket" checked={formData.jenis_kelas === 'paket'} onChange={() => setFormData({...formData, jenis_kelas: 'paket', peserta: []})} className="w-5 h-5 text-blue-600 shrink-0 cursor-pointer" />
-                <div><p className="font-bold text-sm">Kelas Paket (Reguler)</p><p className="text-[10px] md:text-xs font-semibold text-slate-500 mt-1">Plot ke Angkatan/Kelompok.</p></div>
+                <div className="flex flex-col sm:flex-row gap-4">
+              <label className={`flex-1 flex items-center gap-3 p-5 rounded-2xl border-2 cursor-pointer transition-all ${formData.jenis_kelas === 'kelompok' ? 'bg-blue-50/50 border-blue-500 text-blue-800 shadow-md shadow-blue-500/10' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50 text-slate-600 shadow-sm'}`}>
+                <input type="radio" name="jenis_kelas" value="kelompok" checked={formData.jenis_kelas === 'kelompok'} onChange={() => setFormData({...formData, jenis_kelas: 'kelompok', jurusan: '', peserta: []})} className="w-5 h-5 text-blue-600 shrink-0 cursor-pointer" />
+                <div><p className="font-bold text-sm">Kelas Kelompok</p><p className="text-xs font-semibold text-slate-500 mt-1">Contoh: INFORMATIKA 8 MALAM, PTG2.</p></div>
               </label>
-              <label className={`flex-1 flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all hover:-translate-y-0.5 ${formData.jenis_kelas === 'kelompok' ? 'bg-blue-50/50 border-blue-500 text-blue-800 shadow-md shadow-blue-500/10' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50 text-slate-600 shadow-sm'}`}>
-                <input type="radio" name="jenis_kelas" value="kelompok" checked={formData.jenis_kelas === 'kelompok'} onChange={() => setFormData({...formData, jenis_kelas: 'kelompok'})} className="w-5 h-5 text-blue-600 shrink-0 cursor-pointer" />
-                <div><p className="font-bold text-sm">Kelas Lintas (KRS)</p><p className="text-[10px] md:text-xs font-semibold text-slate-500 mt-1">Pilih mahasiswa manual.</p></div>
+              <label className={`flex-1 flex items-center gap-3 p-5 rounded-2xl border-2 cursor-pointer transition-all ${formData.jenis_kelas === 'paket' ? 'bg-blue-50/50 border-blue-500 text-blue-800 shadow-md shadow-blue-500/10' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50 text-slate-600 shadow-sm'}`}>
+                <input type="radio" name="jenis_kelas" value="paket" checked={formData.jenis_kelas === 'paket'} onChange={() => setFormData({...formData, jenis_kelas: 'paket', kelas_id: '', peserta: []})} className="w-5 h-5 text-blue-600 shrink-0 cursor-pointer" />
+                <div><p className="font-bold text-sm">Kelas Jurusan</p><p className="text-xs font-semibold text-slate-500 mt-1">Contoh: ITK, ADM, KDG.</p></div>
               </label>
             </div>
           </div>
 
-          {formData.jenis_kelas === 'paket' && (
+          {formData.jenis_kelas === 'kelompok' && (
             <div className="animate-in fade-in duration-300 relative z-[5]">
-              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Pilih Angkatan / Kelompok Target</label>
-              <SearchableSelect groups={angkatanGroups} value={formData.angkatan_id} onChange={(id) => setFormData({...formData, angkatan_id: id})} placeholder="-- Cari dan Pilih Angkatan/Kelompok --" />
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Pilih Kelas Kelompok</label>
+              <SearchableSelect options={kelasOptions} value={formData.kelas_id} onChange={(id) => setFormData({...formData, kelas_id: id})} placeholder="-- Cari dan Pilih Kelas Kelompok --" />
             </div>
           )}
 
-          {formData.jenis_kelas === 'kelompok' && (
+          {formData.jenis_kelas === 'paket' && (
+            <div className="animate-in fade-in duration-300 relative z-[5]">
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Pilih Jurusan</label>
+              <SearchableSelect options={uniqueJurusan.map(jurusan => ({ id: jurusan, label: jurusan }))} value={formData.jurusan} onChange={(jurusan) => setFormData({...formData, jurusan})} placeholder="-- Cari dan Pilih Jurusan --" />
+            </div>
+          )}
+
+          {formData.jenis_kelas === 'lintas' && (
             <div className="border-2 border-indigo-100/60 rounded-[24px] p-5 md:p-6 bg-indigo-50/30 animate-in fade-in duration-300">
               <div className="flex justify-between items-end mb-4">
                 <label className="text-[11px] font-black text-indigo-700 uppercase tracking-widest flex items-center gap-2"><CheckSquare size={18} strokeWidth={2.5}/> Pilih Peserta KRS</label>
@@ -352,7 +351,7 @@ const ModalLihatPeserta = ({ isOpen, onClose, mkData, onRefresh }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in" onClick={onClose}>
-      <div className="bg-white w-full max-w-lg rounded-[32px] p-6 md:p-8 shadow-2xl relative" onClick={e => e.stopPropagation()}>
+      <div className="bg-white w-full max-w-3xl rounded-[32px] p-6 md:p-10 shadow-2xl relative" onClick={e => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-5 right-5 md:top-6 md:right-6 p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-all active:scale-95"><X size={20} strokeWidth={2.5}/></button>
         <h3 className="text-xl md:text-2xl font-black text-slate-800 mb-2 flex items-center gap-3 tracking-tight">
           <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><Users size={24} strokeWidth={2.5}/></div>
@@ -360,7 +359,7 @@ const ModalLihatPeserta = ({ isOpen, onClose, mkData, onRefresh }) => {
         </h3>
         <p className="text-[11px] md:text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 w-fit mb-6 uppercase tracking-widest">{mkData?.kode_mk} - {mkData?.nama_mk}</p>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl h-72 md:h-80 overflow-y-auto shadow-inner custom-scrollbar">
+        <div className="bg-white border border-slate-200/80 rounded-2xl h-[28rem] md:h-[34rem] overflow-y-auto shadow-inner custom-scrollbar">
           {isLoading ? <div className="h-full flex flex-col items-center justify-center text-slate-400 text-sm font-bold uppercase tracking-wider animate-pulse gap-2"><RefreshCw size={24} className="animate-spin"/> Memuat data...</div> : peserta.length > 0 ? (
             <div className="divide-y divide-slate-100">
               {peserta.map(p => (
@@ -484,7 +483,7 @@ const DataMatkul = () => {
   const [activeTab, setActiveTab] = useState('master'); 
   const [matkulList, setMatkulList] = useState([]);
   const [dosenList, setDosenList] = useState([]);
-  const [angkatanList, setAngkatanList] = useState([]);
+  const [kelasList, setKelasList] = useState([]);
   const [mahasiswaList, setMahasiswaList] = useState([]);
   
   const [search, setSearch] = useState('');
@@ -501,13 +500,13 @@ const DataMatkul = () => {
 
   const fetchData = async () => {
     try {
-      const [rMatkul, rDosen, rAngkatan, rMhs] = await Promise.all([
+      const [rMatkul, rDosen, rKelas, rMhs] = await Promise.all([
         axiosClient.get(`/matkul`).then(r => r.data).catch(()=>({data:[]})),
         axiosClient.get(`/dosen`).then(r => r.data).catch(()=>({data:[]})),
-        axiosClient.get(`/angkatan`).then(r => r.data).catch(()=>({data:[]})),
+        axiosClient.get(`/kelas`).then(r => r.data).catch(()=>({data:[]})),
         axiosClient.get(`/mahasiswa`).then(r => r.data).catch(()=>({data:[]}))
       ]);
-      setMatkulList(rMatkul.data || []); setDosenList(rDosen.data || []); setAngkatanList(rAngkatan.data || []); setMahasiswaList(rMhs.data || []);
+      setMatkulList(rMatkul.data || []); setDosenList(rDosen.data || []); setKelasList(rKelas.data || []); setMahasiswaList(rMhs.data || []);
     } catch (e) {}
   };
 
@@ -555,24 +554,17 @@ const DataMatkul = () => {
   };
 
   const getDisplayBadge = (m) => {
-    if (m.jenis_kelas === 'kelompok') {
-      const jurusanKrs = m.kelompok_jurusan || 'BELUM ADA PESERTA';
-      return <div className="bg-amber-50 text-amber-700 border border-amber-100 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest w-fit">KRS: <span className="text-amber-500">{jurusanKrs}</span></div>;
-    } else if (m.nama_angkatan) {
-      const isKlp = isKelompok(m.nama_angkatan);
-      return <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest w-fit ${isKlp ? 'bg-rose-50 text-rose-700 border border-rose-100' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>{isKlp ? `KLP: ${m.nama_angkatan}` : m.nama_angkatan}</div>;
-    } else {
-      return <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-xl w-fit border border-dashed border-slate-200">Belum di-plot</div>;
-    }
+    const label = m.jenis_kelas === 'kelompok' ? m.nama_kelas : m.jurusan;
+    return <span className={`text-sm ${label ? 'text-slate-600' : 'text-slate-400 italic'}`}>{label || 'Belum di-plot'}</span>;
   };
 
   const columns = activeTab === 'master' 
     ? [
-        { header: 'Kode MK', accessor: 'kode_mk', tdClassName: 'font-black text-slate-700 tracking-wide' },
-        { header: 'Nama Mata Kuliah', accessor: 'nama_mk', tdClassName: 'font-bold text-slate-800' },
-        { header: 'Semester', render: m => <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${m.semester === 'Ganjil' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>{m.semester || 'Ganjil'}</span> },
-        { header: 'SKS', accessor: 'sks', tdClassName: 'font-black text-slate-500 text-center text-sm' },
-        { header: 'JURUSAN / KELOMPOK / ANGKATAN', render: m => getDisplayBadge(m) },
+        { header: 'Kode MK', accessor: 'kode_mk', className: 'font-normal', tdClassName: 'font-medium text-slate-700 tracking-wide' },
+        { header: 'Nama Mata Kuliah', accessor: 'nama_mk', className: 'font-normal', tdClassName: 'font-medium text-slate-800' },
+        { header: 'Semester', className: 'font-normal', render: m => <span className="text-sm text-slate-600">{m.semester || 'Ganjil'}</span> },
+        { header: 'SKS', accessor: 'sks', className: 'font-normal', tdClassName: 'font-medium text-slate-500 text-center text-sm' },
+        { header: 'KELOMPOK / JURUSAN', className: 'font-normal', render: m => getDisplayBadge(m) },
         { header: 'Aksi',
       className: 'text-center',
       tdClassName: 'text-center', render: m => (
@@ -585,10 +577,10 @@ const DataMatkul = () => {
         }
       ]
     : [
-        { header: 'Kode MK', accessor: 'kode_mk', tdClassName: 'font-black text-slate-700 tracking-wide' },
-        { header: 'Nama Mata Kuliah', accessor: 'nama_mk', tdClassName: 'font-bold text-slate-800' },
-        { header: 'Dosen Pengampu', render: m => <span className="font-bold text-slate-700">{m.nama_dosen || <span className="text-[10px] font-black uppercase tracking-widest text-rose-500 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-100">Belum ada dosen</span>}</span> },
-        { header: 'JURUSAN / KELOMPOK / ANGKATAN', render: m => getDisplayBadge(m) },
+        { header: 'Kode MK', accessor: 'kode_mk', className: 'font-normal', tdClassName: 'font-medium text-slate-700 tracking-wide' },
+        { header: 'Nama Mata Kuliah', accessor: 'nama_mk', className: 'font-normal', tdClassName: 'font-medium text-slate-800' },
+        { header: 'Dosen Pengampu', className: 'font-normal', render: m => <span className="font-medium text-slate-700">{m.nama_dosen || <span className="text-sm text-rose-500">Belum ada dosen</span>}</span> },
+        { header: 'KELOMPOK / JURUSAN', className: 'font-normal', render: m => getDisplayBadge(m) },
         { header: 'Aksi',
       className: 'text-center',
       tdClassName: 'text-center', render: m => (
@@ -621,10 +613,11 @@ const DataMatkul = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/40 p-4 md:p-6 animate-in fade-in duration-300">
+      <div className="bg-white rounded-[32px] border border-white shadow-[0_20px_60px_-24px_rgba(15,23,42,0.35)] p-3 md:p-5 animate-in fade-in duration-300">
         <DataTable 
           data={filteredData}
           columns={columns}
+          containerClassName="border-0 rounded-[24px] shadow-none"
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           emptyMessage="Belum ada data mata kuliah yang dapat ditampilkan."
@@ -658,7 +651,7 @@ const DataMatkul = () => {
       </div>
 
       <ModalMasterMatkul isOpen={isMasterOpen} onClose={()=>setMasterOpen(false)} onSave={saveMaster} editData={selectedMatkul} mahasiswaList={mahasiswaList} />
-      <ModalAssignMatkul isOpen={isAssignOpen} onClose={()=>setAssignOpen(false)} onSave={saveAssign} mkData={selectedMatkul} dosenList={dosenList} angkatanList={angkatanList} mahasiswaList={mahasiswaList} />
+      <ModalAssignMatkul isOpen={isAssignOpen} onClose={()=>setAssignOpen(false)} onSave={saveAssign} mkData={selectedMatkul} dosenList={dosenList} kelasList={kelasList} mahasiswaList={mahasiswaList} />
       <ModalLihatPeserta isOpen={isPesertaOpen} onClose={()=>setPesertaOpen(false)} mkData={selectedMatkul} onRefresh={fetchData} />
       <ModalCSVMatkul isOpen={isCsvOpen} onClose={()=>setCsvOpen(false)} onSuccess={()=>{fetchData(); showToast("CSV diimpor!", "success");}} />
     </div>

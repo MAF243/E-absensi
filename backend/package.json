@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "sync-schema": "node scripts/syncSchema.js",
     "test": "jest",
     "migrate": "npx knex migrate:latest",
     "migrate:make": "npx knex migrate:make",

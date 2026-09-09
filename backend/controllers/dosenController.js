@@ -18,11 +18,18 @@ const createDosen = async (req, res, next) => {
 };
 
 const updateDosen = async (req, res, next) => {
+  if (req.user.role === 'dosen' && Number(req.params.id) !== Number(req.user.id)) {
+    throw new AppError('Anda hanya dapat memperbarui profil sendiri.', 403);
+  }
   if (!req.body.nomor_induk || !req.body.nama_lengkap) {
       throw new AppError("NIDN/Inisial dan Nama wajib diisi!", 400);
     }
-    req.body.role = 'dosen';
-    await userService.update(req.params.id, req.body);
+    if (req.user.role === 'dosen') {
+      await userService.updateOwnDosenProfile(req.params.id, req.body);
+    } else {
+      req.body.role = 'dosen';
+      await userService.update(req.params.id, req.body);
+    }
     res.json({ success: true, message: "Data dosen berhasil diperbarui!" });
   
 };

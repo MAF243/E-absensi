@@ -35,7 +35,36 @@ class MatkulService {
   }
 
   async assignMatkul(id, data) {
-    await matkulRepository.assignMatkul(id, data);
+    const matkul = await matkulRepository.getMatkulDetail(id);
+    if (!matkul) {
+      const error = new Error('Mata kuliah tidak ditemukan.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const payload = {
+      ...data,
+      jenis_kelas: data.jenis_kelas === 'kelompok' ? 'kelompok' : 'paket',
+      kelas_id: data.kelas_id || null,
+      jurusan: data.jurusan ? String(data.jurusan).trim().toUpperCase() : null
+    };
+
+    if (payload.jenis_kelas === 'kelompok' && !payload.kelas_id) {
+      const error = new Error('Kelas kelompok wajib dipilih.');
+      error.statusCode = 400;
+      throw error;
+    }
+    if (payload.jenis_kelas === 'kelompok' && !(await matkulRepository.getKelas(payload.kelas_id))) {
+      const error = new Error('Kelas kelompok tidak ditemukan.');
+      error.statusCode = 400;
+      throw error;
+    }
+    if (payload.jenis_kelas === 'paket' && !payload.jurusan) {
+      const error = new Error('Jurusan wajib dipilih.');
+      error.statusCode = 400;
+      throw error;
+    }
+    await matkulRepository.assignMatkul(id, payload);
   }
 
   async getPesertaDetail(id) {
@@ -47,8 +76,8 @@ class MatkulService {
     }
     
     let mahasiswa = [];
-    if (mk.jenis_kelas === 'paket') {
-      mahasiswa = await matkulRepository.getPesertaPaket(mk.kelas_id || 0);
+    if (mk.kelas_id) {
+      mahasiswa = await matkulRepository.getPesertaKelas(mk.kelas_id);
     } else {
       mahasiswa = await matkulRepository.getPesertaLintas(id);
     }

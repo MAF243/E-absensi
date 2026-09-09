@@ -44,9 +44,21 @@ class UserRepository {
     return result.affectedRows > 0;
   }
 
+  async updateOwnDosenProfile(id, data) {
+    const hasPassword = Boolean(data.password);
+    const query = hasPassword
+      ? 'UPDATE users SET nomor_induk = ?, nama_lengkap = ?, password = ? WHERE id = ? AND role = \'dosen\''
+      : 'UPDATE users SET nomor_induk = ?, nama_lengkap = ? WHERE id = ? AND role = \'dosen\'';
+    const params = hasPassword
+      ? [data.nomor_induk, data.nama_lengkap, data.password, id]
+      : [data.nomor_induk, data.nama_lengkap, id];
+    const [result] = await db.query(query, params);
+    return result.affectedRows > 0;
+  }
+
   async checkActivity(id, role) {
     if (role === 'mahasiswa') {
-      const [results] = await db.query("SELECT COUNT(*) as count FROM kehadiran WHERE mahasiswa_id = ?", [id]);
+      const [results] = await db.query("SELECT COUNT(*) as count FROM absensi WHERE user_id = ?", [id]);
       return results[0].count > 0;
     } else if (role === 'dosen') {
       const [results] = await db.query("SELECT COUNT(*) as count FROM sesi_kuliah WHERE dosen_id = ?", [id]);
@@ -73,6 +85,21 @@ class UserRepository {
   
   async bulkAssignAngkatan(ids, angkatan_id) {
     await db.query("UPDATE users SET angkatan_id = ? WHERE id IN (?) AND role='mahasiswa'", [angkatan_id, ids]);
+  }
+
+  async bulkUpdateStatusAngkatan(ids, status_akademik, angkatan_id) {
+    const fields = [];
+    const params = [];
+    if (status_akademik) {
+      fields.push('status_akademik = ?');
+      params.push(status_akademik);
+    }
+    if (angkatan_id !== undefined && angkatan_id !== '') {
+      fields.push('angkatan_id = ?');
+      params.push(angkatan_id);
+    }
+    params.push(ids);
+    await db.query(`UPDATE users SET ${fields.join(', ')} WHERE id IN (?) AND role='mahasiswa'`, params);
   }
   
   async removeKelas(mahasiswa_id) {
@@ -101,7 +128,7 @@ class UserRepository {
     const [results] = await db.query(`
       SELECT 
           s.id, s.mk_id, s.waktu_mulai, s.status, s.agenda, m.nama_mk,
-          (SELECT COUNT(*) FROM kehadiran k WHERE k.sesi_id = s.id AND k.status = 'hadir') AS jumlah_hadir
+          (SELECT COUNT(*) FROM absensi a WHERE a.sesi_id = s.id AND a.status = 'hadir') AS jumlah_hadir
       FROM sesi_kuliah s 
       JOIN mata_kuliah m ON s.mk_id = m.id 
       WHERE m.dosen_id = ? 

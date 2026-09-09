@@ -15,6 +15,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import DataMahasiswa from './pages/admin/DataMahasiswa';
 import DataDosen from './pages/admin/DataDosen';
 import DataMatkul from './pages/admin/DataMatkul';
+import PengaturanAdmin from './pages/admin/PengaturanAdmin';
 
 // 4. Modul Dasbor Dosen
 import DosenDashboard from './pages/dosen/DosenDashboard';

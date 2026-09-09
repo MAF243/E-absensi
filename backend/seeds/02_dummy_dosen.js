@@ -20,7 +20,7 @@ exports.seed = async function(knex) {
       password: passwordHash,
       role: 'dosen',
       jenis_kelamin: i % 2 === 0 ? 'P' : 'L',
-      status_akademik: 'aktif'
+      status_akademik: 'AKTIF'
     });
   }
 

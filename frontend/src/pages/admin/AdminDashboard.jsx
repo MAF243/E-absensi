@@ -10,6 +10,8 @@ import DataDosen from './DataDosen';
 import DataMatkul from './DataMatkul';
 import JadwalSesi from './JadwalSesi'; 
 import RekapAbsensi from './RekapAbsensi'; 
+import PengaturanAdmin from './PengaturanAdmin';
+import AktivitasLog from './AktivitasLog';
 import axiosClient from '../../utils/axiosClient';
 import { GraduationCap, Users, BookOpen, CheckCircle, Trophy, AlertTriangle, Activity } from 'lucide-react';
 
@@ -233,9 +235,11 @@ const AdminDashboard = () => {
             {/* MENU JADWAL, SESI DAN REKAP */}
             {activeMenu === 'jadwal' && <JadwalSesi />}
             {(activeMenu === 'rekap' || activeMenu === 'rekap-absensi') && <RekapAbsensi />}
+            {activeMenu === 'pengaturan' && <PengaturanAdmin />}
+            {activeMenu === 'aktivitas' && <AktivitasLog />}
             
             {/* TAMPILAN FALLBACK UNTUK MENU YANG BELUM DIBUAT */}
-            {!['statistik', 'mahasiswa', 'dosen', 'data-dosen', 'matkul', 'mata-kuliah', 'jadwal', 'rekap', 'rekap-absensi'].includes(activeMenu) && (
+            {!['statistik', 'mahasiswa', 'dosen', 'data-dosen', 'matkul', 'mata-kuliah', 'jadwal', 'rekap', 'rekap-absensi', 'pengaturan', 'aktivitas'].includes(activeMenu) && (
               <div className="p-10 md:p-20 text-center border-2 border-dashed border-slate-300 rounded-[32px] text-slate-500 font-bold bg-white/50 mt-8 animate-in fade-in zoom-in-95">
                 <span className="text-4xl mb-4 block">🚧</span>
                 Halaman untuk modul <span className="text-blue-600 uppercase">{activeMenu}</span> sedang dalam tahap pengembangan.

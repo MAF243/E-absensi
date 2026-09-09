@@ -84,7 +84,11 @@ Pastikan sistem Anda telah memasang perangkat lunak berikut:
    DB_PORT=3306
    PORT=5000
    ```
-4. Jalankan server backend (mode pengembangan):
+4. Jalankan migrasi agar skema database sesuai dengan aplikasi:
+   ```bash
+   npm run migrate
+   ```
+5. Jalankan server backend (mode pengembangan):
    ```bash
    npm run dev
    ```

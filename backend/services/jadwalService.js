@@ -1,9 +1,13 @@
 const jadwalRepository = require('../repositories/jadwalRepository');
 
 class JadwalService {
-  async getJadwal() {
+  async getJadwal(actor) {
     await jadwalRepository.runCronJobs();
-    return await jadwalRepository.getJadwal();
+    return await jadwalRepository.getJadwal(actor?.role === 'dosen' ? actor.id : null);
+  }
+
+  async closeExpiredSessions() {
+    await jadwalRepository.runCronJobs();
   }
   
   async updateJadwal(id, data) {
@@ -19,11 +23,16 @@ class JadwalService {
     await jadwalRepository.resetJadwal(id);
   }
 
-  async bukaSesi(data) {
+  async bukaSesi(data, actor) {
     const mk = await jadwalRepository.checkMk(data.mk_id);
     if (!mk) {
       const err = new Error("Mata kuliah tidak ditemukan.");
       err.statusCode = 404;
+      throw err;
+    }
+    if (actor?.role === 'dosen' && Number(mk.dosen_id) !== Number(actor.id)) {
+      const err = new Error('Anda tidak ditugaskan untuk mata kuliah ini.');
+      err.statusCode = 403;
       throw err;
     }
     if (!mk.hari || !mk.jam_mulai || !mk.jam_selesai) {
@@ -51,10 +60,21 @@ class JadwalService {
       throw err;
     }
 
-    await jadwalRepository.bukaSesi(data);
+    await jadwalRepository.bukaSesi({ ...data, dosen_id: actor?.role === 'dosen' ? actor.id : data.dosen_id });
   }
 
-  async tutupSesi(sesi_id) {
+  async tutupSesi(sesi_id, actor) {
+    const sesi = await jadwalRepository.getSesiInfo(sesi_id);
+    if (!sesi) {
+      const err = new Error('Sesi tidak ditemukan.');
+      err.statusCode = 404;
+      throw err;
+    }
+    if (actor?.role === 'dosen' && Number(sesi.dosen_id) !== Number(actor.id)) {
+      const err = new Error('Anda tidak berwenang menutup sesi ini.');
+      err.statusCode = 403;
+      throw err;
+    }
     await jadwalRepository.tutupSesi(sesi_id);
   }
 

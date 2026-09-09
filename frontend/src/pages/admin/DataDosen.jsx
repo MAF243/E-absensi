@@ -37,12 +37,8 @@ const DataDosen = () => {
     const matchSearch = String(d.nama_lengkap || '').toLowerCase().includes(search.toLowerCase()) || 
                         String(d.nomor_induk || '').toLowerCase().includes(search.toLowerCase());
     
-    const dStatus = String(d.status_akademik).toLowerCase();
-    const matchStatus = filterStatus === '' 
-                        ? true 
-                        : filterStatus === 'tidak aktif' 
-                           ? (dStatus === 'tidak aktif' || dStatus === 'cuti')
-                           : dStatus === filterStatus;
+  const dStatus = String(d.status_akademik || 'AKTIF').toLowerCase() === 'aktif' ? 'aktif' : 'tidak aktif';
+    const matchStatus = filterStatus === '' || dStatus === filterStatus;
 
     return matchSearch && matchStatus;
   });
@@ -86,9 +82,9 @@ const DataDosen = () => {
   };
 
   const columns = [
-    { header: 'NIDN / Inisial', accessor: 'nomor_induk', tdClassName: 'font-black text-slate-700 tracking-wide' },
-    { header: 'Nama Lengkap & Gelar', accessor: 'nama_lengkap', tdClassName: 'font-bold text-slate-800' },
-    { header: 'L/P', accessor: 'jenis_kelamin', className: 'text-center', tdClassName: 'font-black text-slate-500 text-center', render: row => row.jenis_kelamin || '-' },
+    { header: 'NIDN / Inisial', accessor: 'nomor_induk', tdClassName: 'font-medium text-slate-700 tracking-wide' },
+    { header: 'Nama Lengkap & Gelar', accessor: 'nama_lengkap', tdClassName: 'font-medium text-slate-800' },
+    { header: 'L/P', accessor: 'jenis_kelamin', className: 'text-center', tdClassName: 'font-medium text-slate-500 text-center', render: row => row.jenis_kelamin || '-' },
     {
       header: 'Status',
       className: 'text-center',
@@ -96,9 +92,10 @@ const DataDosen = () => {
       render: row => {
         const safeStatus = String(row.status_akademik || 'aktif').trim().toLowerCase();
         const statusColor = safeStatus === 'aktif' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-red-50 border-red-100 text-red-700';
-        const displayStatus = safeStatus === 'cuti' ? 'TIDAK AKTIF' : (row.status_akademik || 'AKTIF');
+        const isActive = safeStatus === 'aktif';
+        const displayStatus = isActive ? 'AKTIF MENGAJAR' : 'TIDAK AKTIF MENGAJAR';
         return (
-          <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black border uppercase tracking-widest ${statusColor}`}>
+          <span className={`px-3 py-1.5 rounded-xl text-[10px] font-medium border uppercase tracking-widest ${statusColor}`}>
             {displayStatus}
           </span>
         );
@@ -109,7 +106,7 @@ const DataDosen = () => {
       className: 'text-center',
       tdClassName: 'text-center',
       render: row => (
-        <div className="flex justify-center gap-1.5">
+          <div className="flex justify-center gap-1.5">
           <button onClick={() => { setProfileData(row); setProfileOpen(true); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all active:scale-95" title="Lihat Profil & Mata Kuliah"><Eye size={18} strokeWidth={2.5} /></button>
           <button onClick={() => { setSelectedDosen(row); setFormOpen(true); }} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all active:scale-95" title="Edit Data"><Edit size={18} strokeWidth={2.5} /></button>
           <button onClick={() => handleDelete(row.id, row.nama_lengkap)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-95" title="Hapus Data"><Trash2 size={18} strokeWidth={2.5} /></button>
@@ -119,7 +116,7 @@ const DataDosen = () => {
   ];
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 min-h-screen font-sans animate-in fade-in duration-500 pb-10">
+    <div className="p-4 md:p-6 lg:p-8 min-h-screen bg-slate-50/80 font-sans animate-in fade-in duration-500 pb-10">
       
       <div className="mb-10 flex items-center gap-4">
         <div className="p-3.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-[20px] shadow-sm">
@@ -131,10 +128,11 @@ const DataDosen = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/40 p-4 md:p-6">
+      <div className="bg-white rounded-[32px] border border-white shadow-[0_20px_60px_-24px_rgba(15,23,42,0.35)] p-3 md:p-5">
         <DataTable 
           data={filteredDosen}
           columns={columns}
+          containerClassName="border-0 rounded-[24px] shadow-none"
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           emptyMessage="Belum ada data dosen yang dapat ditampilkan."
@@ -149,7 +147,7 @@ const DataDosen = () => {
                 <select className="px-4 py-3 bg-slate-50 border border-slate-200/60 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white font-bold text-sm text-slate-600 w-full sm:w-auto transition-all appearance-none cursor-pointer" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                   <option value="">Semua Status</option>
                   <option value="aktif">Aktif Mengajar</option>
-                  <option value="tidak aktif">Tidak Aktif</option>
+                  <option value="tidak aktif">Tidak Aktif Mengajar</option>
                 </select>
               </div>
 

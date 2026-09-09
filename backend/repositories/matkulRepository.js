@@ -38,8 +38,9 @@ class MatkulRepository {
   }
 
   async assignMatkul(id, data) {
-    await db.query("UPDATE mata_kuliah SET dosen_id=?, kelas_id=?, jenis_kelas=? WHERE id=?", 
-      [data.dosen_id || null, data.jenis_kelas === 'paket' ? (data.kelas_id || null) : null, data.jenis_kelas, id]);
+    const isKelompok = data.jenis_kelas === 'kelompok';
+    await db.query("UPDATE mata_kuliah SET dosen_id=?, kelas_id=?, jurusan=?, jenis_kelas=? WHERE id=?", 
+      [data.dosen_id || null, isKelompok ? (data.kelas_id || null) : null, isKelompok ? null : (data.jurusan || null), data.jenis_kelas, id]);
     
     await db.query("DELETE FROM peserta_kelas WHERE mk_id=?", [id]);
     if (data.jenis_kelas === 'kelompok' && data.peserta && data.peserta.length > 0) {
@@ -53,12 +54,28 @@ class MatkulRepository {
     return mk.length > 0 ? mk[0] : null;
   }
 
+  async getKelas(kelasId) {
+    const [rows] = await db.query('SELECT id FROM kelas WHERE id = ?', [kelasId]);
+    return rows[0] || null;
+  }
+
   async getPesertaPaket(kelasId) {
     const query = `
       SELECT id, nomor_induk, nama_lengkap, jenis_kelamin, status_akademik, jurusan 
       FROM users 
       WHERE role = 'mahasiswa' 
       AND kelas_id = ?
+      ORDER BY nama_lengkap ASC
+    `;
+    const [results] = await db.query(query, [kelasId]);
+    return results;
+  }
+
+  async getPesertaKelas(kelasId) {
+    const query = `
+      SELECT id, nomor_induk, nama_lengkap, jenis_kelamin, status_akademik, jurusan
+      FROM users
+      WHERE role = 'mahasiswa' AND kelas_id = ?
       ORDER BY nama_lengkap ASC
     `;
     const [results] = await db.query(query, [kelasId]);

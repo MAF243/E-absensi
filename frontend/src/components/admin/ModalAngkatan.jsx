@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { List, X, UserPlus, Users, Trash2, Edit2, Search, Plus, CheckSquare } from 'lucide-react';
+import { List, X, UserPlus, Users, Trash2, Edit2, Search, Plus, CheckSquare, Pencil } from 'lucide-react';
 import axiosClient from '../../utils/axiosClient';
 import useUiStore from '../../store/useUiStore';
+import ModalMahasiswa from './ModalMahasiswa';
 
-const ModalAngkatan = ({ isOpen, onClose, angkatan: kelas, students, onSuccess }) => {
+const ModalAngkatan = ({ isOpen, onClose, angkatan: kelas, students, angkatanList = [], onSuccess }) => {
   const { showToast, showConfirm } = useUiStore();
 
   const [isAssignMode, setIsAssignMode] = useState(false);
@@ -14,6 +15,8 @@ const ModalAngkatan = ({ isOpen, onClose, angkatan: kelas, students, onSuccess }
   const [editKelompokSelectedIds, setEditKelompokSelectedIds] = useState([]);
   const [isBulkEditJurusanModalOpen, setBulkEditJurusanModalOpen] = useState(false);
   const [bulkNewJurusan, setBulkNewJurusan] = useState('');
+  const [isStudentFormOpen, setStudentFormOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -24,6 +27,8 @@ const ModalAngkatan = ({ isOpen, onClose, angkatan: kelas, students, onSuccess }
       setEditKelompokSelectedIds([]);
       setBulkEditJurusanModalOpen(false);
       setBulkNewJurusan('');
+      setStudentFormOpen(false);
+      setSelectedStudent(null);
     }
   }, [isOpen]);
 
@@ -41,18 +46,49 @@ const ModalAngkatan = ({ isOpen, onClose, angkatan: kelas, students, onSuccess }
     } catch (err) { showToast("Terjadi kesalahan jaringan.", "error"); }
   };
 
+  const handleSaveStudent = async (formData) => {
+    try {
+      const url = selectedStudent ? `/mahasiswa/${selectedStudent.id}` : '/mahasiswa';
+      const method = selectedStudent ? 'put' : 'post';
+      const { data: response } = await axiosClient[method](url, {
+        ...formData,
+        angkatan_id: formData.angkatan_id || kelas.angkatan_id,
+        kelas_id: kelas.id
+      });
+      if (!response.success) throw new Error(response.message);
+      showToast(selectedStudent ? 'Data mahasiswa berhasil diperbarui.' : 'Mahasiswa berhasil ditambahkan ke kelas.', 'success');
+      setStudentFormOpen(false);
+      setSelectedStudent(null);
+      await onSuccess();
+    } catch (error) {
+      showToast(error.response?.data?.message || error.message || 'Gagal menyimpan data mahasiswa.', 'error');
+    }
+  };
+
   const handleRemoveFromKelas = async (studentId, studentName) => {
-    showConfirm(`Keluarkan ${studentName} dari kelas ini?`, async () => {
+    const isConfirmed = await showConfirm({
+      title: 'Keluarkan Mahasiswa',
+      message: `Keluarkan ${studentName} dari kelas ini?`,
+      confirmText: 'Ya, Keluarkan',
+      type: 'danger'
+    });
+    if (isConfirmed) {
       try {
         const { data: res } = await axiosClient.post('/mahasiswa/remove-kelas', { mahasiswa_id: studentId, kelas_id: kelas.id });
         if (res.success) { showToast(res.message, "success"); setEditKelompokSelectedIds(prev => prev.filter(id => id !== studentId)); onSuccess(); } else showToast(res.message, "error");
       } catch (err) { showToast("Kesalahan jaringan.", "error"); }
-    });
+    }
   };
 
   const handleBulkRemoveFromKelas = async () => {
     if (editKelompokSelectedIds.length === 0) return;
-    showConfirm(`Keluarkan ${editKelompokSelectedIds.length} mahasiswa dari kelas ini?`, async () => {
+    const isConfirmed = await showConfirm({
+      title: 'Keluarkan Mahasiswa',
+      message: `Keluarkan ${editKelompokSelectedIds.length} mahasiswa dari kelas ini?`,
+      confirmText: 'Ya, Keluarkan',
+      type: 'danger'
+    });
+    if (isConfirmed) {
       try {
         const promises = editKelompokSelectedIds.map(id => 
           axiosClient.post('/mahasiswa/remove-kelas', { mahasiswa_id: id, kelas_id: kelas.id }).then(r => r.data)
@@ -64,7 +100,7 @@ const ModalAngkatan = ({ isOpen, onClose, angkatan: kelas, students, onSuccess }
       } catch (err) {
         showToast("Terjadi kesalahan jaringan saat mengeluarkan mahasiswa.", "error");
       }
-    });
+    }
   };
 
   const handleBulkEditJurusanSubmit = async (e) => {
@@ -157,16 +193,16 @@ const ModalAngkatan = ({ isOpen, onClose, angkatan: kelas, students, onSuccess }
               <div className="flex justify-between items-center mb-4 shrink-0">
                 <h4 className="font-bold text-slate-700 flex items-center gap-2"><Users size={18}/> Anggota Terdaftar</h4>
                 
-                {editKelompokSelectedIds.length > 0 && (
-                  <div className="flex gap-2 animate-in fade-in">
+                <div className="flex gap-2 animate-in fade-in">
+                  {editKelompokSelectedIds.length > 0 && <>
                     <button onClick={() => setBulkEditJurusanModalOpen(true)} className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl text-xs font-bold border border-amber-200 hover:bg-amber-100 flex items-center gap-1.5 shadow-sm transition-colors">
                       <Edit2 size={14}/> Edit Jurusan ({editKelompokSelectedIds.length})
                     </button>
                     <button onClick={handleBulkRemoveFromKelas} className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 hover:bg-rose-100 flex items-center gap-1.5 shadow-sm transition-colors">
                       <Trash2 size={14}/> Keluarkan ({editKelompokSelectedIds.length})
                     </button>
-                  </div>
-                )}
+                  </>}
+                </div>
               </div>
 
               <div className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex flex-col h-full">
@@ -204,6 +240,7 @@ const ModalAngkatan = ({ isOpen, onClose, angkatan: kelas, students, onSuccess }
                               <td className="px-4 py-3 font-bold text-slate-800 text-xs md:text-sm">{m.nama_lengkap}</td>
                               <td className="px-4 py-3 font-bold text-indigo-600 text-xs md:text-sm">{m.jurusan || '-'}</td>
                               <td className="px-4 py-3 text-center">
+                                <button onClick={() => { setSelectedStudent(m); setStudentFormOpen(true); }} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg" title="Edit mahasiswa"><Pencil size={16}/></button>
                                 <button onClick={() => handleRemoveFromKelas(m.id, m.nama_lengkap)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><X size={18}/></button>
                               </td>
                             </tr>
@@ -218,6 +255,16 @@ const ModalAngkatan = ({ isOpen, onClose, angkatan: kelas, students, onSuccess }
           </div>
         </div>
       </div>
+
+      <ModalMahasiswa
+        isOpen={isStudentFormOpen}
+        onClose={() => { setStudentFormOpen(false); setSelectedStudent(null); }}
+        onSave={handleSaveStudent}
+        editData={selectedStudent}
+        angkatanList={angkatanList}
+        defaultAngkatanId={kelas.angkatan_id}
+        defaultKelasId={kelas.id}
+      />
 
       {/* Modal Kecil: Edit Jurusan Massal */}
       {isBulkEditJurusanModalOpen && (

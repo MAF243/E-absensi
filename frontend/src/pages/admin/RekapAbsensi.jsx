@@ -300,10 +300,11 @@ const RekapAbsensi = () => {
       </div>
 
       {/* HASIL DATA (DATATABLE) */}
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/40 p-4 md:p-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 fill-mode-both">
+      <div className="bg-white rounded-[32px] border border-white shadow-[0_20px_60px_-24px_rgba(15,23,42,0.35)] p-3 md:p-5 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 fill-mode-both">
         <DataTable
           data={currentListWithIndex}
           columns={activeTab === 'mahasiswa' ? columnsMhs : columnsDosen}
+          containerClassName="border-0 rounded-[24px] shadow-none"
           isLoading={isLoading}
           emptyMessage={
             <div className="flex flex-col items-center justify-center py-16 text-slate-400 animate-in zoom-in-95 duration-500">

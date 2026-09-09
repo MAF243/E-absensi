@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { login } = require('../controllers/authController');
+const { updateProfile } = require('../controllers/authController');
+const { verifyToken } = require('../middlewares/authMiddleware');
+const activityRepository = require('../repositories/activityRepository');
 const validate = require('../middlewares/validateMiddleware');
 const { loginSchema } = require('../validations/authValidation');
 
@@ -39,5 +42,16 @@ const { loginSchema } = require('../validations/authValidation');
  *         description: Identitas atau password salah
  */
 router.post('/login', validate(loginSchema), login);
+router.put('/profile', verifyToken, updateProfile);
+router.get('/activity', verifyToken, require('../middlewares/authMiddleware').verifyRole('admin'), async (req, res, next) => {
+	try {
+		const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+		const pageSize = Math.min(50, Math.max(1, Number.parseInt(req.query.pageSize, 10) || 50));
+		const result = await activityRepository.findRecent(page, pageSize);
+		res.json({ success: true, data: result.rows, pagination: { page, pageSize, total: result.total, totalPages: Math.ceil(result.total / pageSize) } });
+	} catch (error) {
+		next(error);
+	}
+});
 
 module.exports = router;

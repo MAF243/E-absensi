@@ -4,7 +4,7 @@ import { X, AlertCircle, ChevronDown } from 'lucide-react';
 const ModalDosen = ({ isOpen, onClose, onSave, editData }) => {
   const defaultForm = { 
     nomor_induk: '', nama_lengkap: '', password: '', 
-    status_akademik: 'aktif', jenis_kelamin: 'L' 
+    status_akademik: 'AKTIF', jenis_kelamin: 'L'
   };
 
   const [formData, setFormData] = useState(defaultForm);
@@ -17,7 +17,7 @@ const ModalDosen = ({ isOpen, onClose, onSave, editData }) => {
           nomor_induk: editData.nomor_induk || '',
           nama_lengkap: editData.nama_lengkap || '',
           password: '', 
-          status_akademik: editData.status_akademik || 'aktif',
+          status_akademik: editData.status_akademik || 'AKTIF',
           jenis_kelamin: editData.jenis_kelamin || 'L'
         });
       } else {
@@ -121,8 +121,8 @@ const ModalDosen = ({ isOpen, onClose, onSave, editData }) => {
               <label className="text-xs font-bold text-slate-700 block mb-2 tracking-wide uppercase">Status Akademik</label>
               <div className="relative">
                 <select className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-semibold rounded-2xl px-5 py-3.5 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white transition-all appearance-none cursor-pointer" value={formData.status_akademik} onChange={(e) => setFormData({...formData, status_akademik: e.target.value})}>
-                  <option value="aktif">Aktif Mengajar</option>
-                  <option value="tidak aktif">Tidak Aktif</option>
+                  <option value="AKTIF">Aktif Mengajar</option>
+                  <option value="KELUAR">Tidak Aktif Mengajar</option>
                 </select>
                 <ChevronDown className="absolute right-4 top-3.5 text-slate-400 pointer-events-none" size={18} strokeWidth={2.5} />
               </div>

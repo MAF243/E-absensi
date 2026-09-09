@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Trash2, Edit, Eye, Upload, Users, BookOpen, User, X, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Edit2, Check, GraduationCap, List, UserPlus, CheckSquare } from 'lucide-react';
+import { Search, Plus, Trash2, Edit, Eye, Upload, Users, BookOpen, User, X, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Edit2, Check, GraduationCap, List, UserPlus, CheckSquare, SlidersHorizontal } from 'lucide-react';
 import ModalMahasiswa from '../../components/admin/ModalMahasiswa'; 
 import ModalUploadCSV from '../../components/admin/ModalUploadCSV';
 import ModalAngkatan from '../../components/admin/ModalAngkatan'; 
@@ -18,6 +18,9 @@ const DataMahasiswa = () => {
   const [filterJurusan, setFilterJurusan] = useState('');
   const [filterAngkatan, setFilterAngkatan] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+  const [isBulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkAngkatan, setBulkAngkatan] = useState('');
 
   // State Modal
   const [isFormOpen, setFormOpen] = useState(false);
@@ -129,6 +132,30 @@ const DataMahasiswa = () => {
     }
   };
 
+  const handleBulkUpdate = async (e) => {
+    e.preventDefault();
+    if (!bulkStatus && !bulkAngkatan) {
+      showToast('Pilih status atau angkatan yang akan diubah.', 'error');
+      return;
+    }
+    try {
+      const { data: res } = await axiosClient.put('/mahasiswa/bulk-update-status-angkatan', {
+        studentIds: selectedIds,
+        status_akademik: bulkStatus || undefined,
+        angkatan_id: bulkAngkatan || undefined
+      });
+      if (!res.success) throw new Error(res.message);
+      setBulkEditOpen(false);
+      setBulkStatus('');
+      setBulkAngkatan('');
+      setSelectedIds([]);
+      await fetchData();
+      showToast(res.message || 'Data mahasiswa berhasil diperbarui.', 'success');
+    } catch (error) {
+      showToast(error.response?.data?.message || error.message || 'Gagal memperbarui data mahasiswa.', 'error');
+    }
+  };
+
   const handleDelete = async (id, nama) => {
     const confirm = await showConfirm(`Yakin hapus data ${nama}?`);
     if (confirm) {
@@ -200,15 +227,16 @@ const DataMahasiswa = () => {
         /* TAB 1: TABEL MAHASISWA UTAMA */
         <div className="bg-white rounded-[32px] p-5 lg:p-6 mb-8 border border-slate-100 shadow-xl shadow-slate-200/30">
           <div className="flex flex-col xl:flex-row gap-4 justify-between items-center mb-6">
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
-              <div className="relative w-full sm:w-64 shrink-0"><Search className="absolute left-3.5 top-3 text-slate-400" size={18} /><input type="text" placeholder="Cari NIM/Nama..." className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-              <select className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm text-slate-600 w-full sm:w-auto" value={filterJurusan} onChange={(e) => setFilterJurusan(e.target.value)}><option value="">Semua Jurusan</option>{opsiJurusan.map((j, i) => <option key={i} value={j}>{j}</option>)}</select>
-              <select className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm text-slate-600 w-full sm:w-auto" value={filterAngkatan} onChange={(e) => setFilterAngkatan(e.target.value)}><option value="">Semua Angkatan</option>{angkatanList.map((a) => <option key={a.id} value={a.id}>{a.nama_angkatan}</option>)}</select>
+            <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full xl:w-auto min-w-0">
+              <div className="relative w-full sm:w-56 shrink-0"><Search className="absolute left-3.5 top-2.5 text-slate-400" size={17} /><input type="text" placeholder="Cari NIM/Nama..." className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+              <select className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs text-slate-600 w-full sm:w-auto" value={filterJurusan} onChange={(e) => setFilterJurusan(e.target.value)}><option value="">Semua Jurusan</option>{opsiJurusan.map((j, i) => <option key={i} value={j}>{j}</option>)}</select>
+              <select className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs text-slate-600 w-full sm:w-auto" value={filterAngkatan} onChange={(e) => setFilterAngkatan(e.target.value)}><option value="">Semua Angkatan</option>{angkatanList.map((a) => <option key={a.id} value={a.id}>{a.nama_angkatan}</option>)}</select>
             </div>
-            <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full xl:w-auto mt-2 xl:mt-0">
-              {selectedIds.length > 0 && <button onClick={handleBulkDelete} className="bg-red-50 text-red-600 border border-red-100 px-4 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-red-100 flex-1 md:flex-none justify-center text-sm"><Trash2 size={16}/> Hapus ({selectedIds.length})</button>}
-              <button onClick={() => setCsvOpen(true)} className="bg-white border border-slate-200 text-slate-700 px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 text-sm shadow-sm flex-1 md:flex-none"><Upload size={16}/> Import CSV</button>
-              <button onClick={() => { setSelectedStudent(null); setFormOpen(true); }} className="bg-blue-600 text-white px-4 md:px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 shadow-sm text-sm flex-1 md:flex-none w-full md:w-auto"><Plus size={16}/> Tambah Data</button>
+            <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto mt-2 xl:mt-0">
+              {selectedIds.length > 0 && <button onClick={handleBulkDelete} className="bg-red-50 text-red-600 border border-red-100 px-3.5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 hover:bg-red-100 justify-center text-xs whitespace-nowrap"><Trash2 size={15}/> Hapus ({selectedIds.length})</button>}
+              {selectedIds.length > 0 && <button onClick={() => setBulkEditOpen(true)} className="bg-amber-50 text-amber-700 border border-amber-100 px-3.5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 hover:bg-amber-100 justify-center text-xs whitespace-nowrap"><SlidersHorizontal size={15}/> Edit Massal ({selectedIds.length})</button>}
+              <button onClick={() => setCsvOpen(true)} className="bg-white border border-slate-200 text-slate-700 px-3.5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 hover:bg-slate-50 text-xs shadow-sm whitespace-nowrap"><Upload size={15}/> Import CSV</button>
+              <button onClick={() => { setSelectedStudent(null); setFormOpen(true); }} className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 hover:bg-blue-700 shadow-sm text-xs whitespace-nowrap"><Plus size={15}/> Tambah Data</button>
             </div>
           </div>
 
@@ -272,7 +300,7 @@ const DataMahasiswa = () => {
         </div>
       )}
 
-      <ModalAngkatan isOpen={isViewStudentsOpen} onClose={() => setViewStudentsOpen(false)} angkatan={selectedAngkatanView} students={students} onSuccess={fetchData} />
+      <ModalAngkatan isOpen={isViewStudentsOpen} onClose={() => setViewStudentsOpen(false)} angkatan={selectedAngkatanView} students={students} angkatanList={angkatanList} onSuccess={fetchData} />
 
       {/* Modal Profile Sederhana */}
       {isProfileOpen && profileData && (
@@ -289,6 +317,44 @@ const DataMahasiswa = () => {
 
       <ModalMahasiswa isOpen={isFormOpen} onClose={() => setFormOpen(false)} onSave={handleSaveStudent} editData={selectedStudent} angkatanList={angkatanList} />
       <ModalUploadCSV isOpen={isCsvOpen} onClose={() => setCsvOpen(false)} onSuccess={() => { fetchData(); showToast("Data massal ditambahkan!", "success"); }} angkatanList={angkatanList} />
+
+      {isBulkEditOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setBulkEditOpen(false)}>
+          <form onSubmit={handleBulkUpdate} onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-black text-slate-800">Edit Massal Mahasiswa</h3>
+                <p className="text-sm text-slate-500 mt-1">Mengubah {selectedIds.length} mahasiswa terpilih.</p>
+              </div>
+              <button type="button" onClick={() => setBulkEditOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl"><X size={18} /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Status Akademik</label>
+                <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500">
+                  <option value="">Tidak diubah</option>
+                  <option value="AKTIF">Aktif</option>
+                  <option value="CUTI">Cuti</option>
+                  <option value="LULUS">Lulus</option>
+                  <option value="KELUAR">Keluar</option>
+                  <option value="RESIGN">Resign</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Angkatan</label>
+                <select value={bulkAngkatan} onChange={(e) => setBulkAngkatan(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500">
+                  <option value="">Tidak diubah</option>
+                  {angkatanList.map((angkatan) => <option key={angkatan.id} value={angkatan.id}>{angkatan.nama_angkatan}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-7">
+              <button type="button" onClick={() => setBulkEditOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold">Batal</button>
+              <button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">Simpan Perubahan</button>
+            </div>
+          </form>
+        </div>
+      )}
 
     </div>
   );

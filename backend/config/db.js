@@ -1,29 +1,33 @@
 const mysql = require('mysql2');
-require('dotenv').config(); // Membaca variabel dari file .env
+require('dotenv').config({ quiet: true });
 
-// Membuat Connection Pool untuk efisiensi server
+const isProduction = process.env.NODE_ENV === 'production';
+const connectionConfig = {
+  host: process.env.DB_HOST || '',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD ?? '',
+  database: process.env.DB_NAME || 'e_absensi_stikom',
+  port: Number(process.env.DB_PORT || 3306),
+};
+
+if (!isProduction && !process.env.DB_USER) {
+  console.warn('DB_USER tidak ditemukan; memakai konfigurasi Laragon lokal (root tanpa password).');
+}
+
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
+  ...connectionConfig,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
 });
 
-// Mengubah pool menjadi format Promise agar bisa menggunakan async/await nantinya
 const db = pool.promise();
 
-// Test koneksi saat server pertama kali menyala
-pool.getConnection((err, connection) => {
-  if (err) {
-    console.error('❌ Gagal terhubung ke Database MySQL:', err.message);
-  } else {
-    console.log('✅ Berhasil terhubung ke Database MySQL (e_absensi_stikom)');
-    connection.release();
-  }
-});
+// Repositories can be imported by unit tests without opening a connection.
+// The application entry point explicitly calls this before serving requests.
+db.verifyConnection = async () => {
+  const connection = await db.getConnection();
+  connection.release();
+};
 
 module.exports = db;

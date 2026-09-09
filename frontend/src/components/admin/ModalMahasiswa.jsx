@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, AlertCircle, ChevronDown } from 'lucide-react';
 
-const ModalMahasiswa = ({ isOpen, onClose, onSave, editData, angkatanList }) => {
+const ModalMahasiswa = ({ isOpen, onClose, onSave, editData, angkatanList, defaultAngkatanId = '', defaultKelasId = '' }) => {
   // Nilai bawaan form kosong
   const defaultForm = { 
-    nomor_induk: '', nama_lengkap: '', password: '', status_akademik: 'aktif', 
-    jenis_kelamin: 'L', jurusan: '', angkatan_id: '' 
+    nomor_induk: '', nama_lengkap: '', password: '', status_akademik: 'AKTIF',
+    jenis_kelamin: 'L', jurusan: '', angkatan_id: '', kelas_id: '' 
   };
 
   const [formData, setFormData] = useState(defaultForm);
@@ -22,10 +22,11 @@ const ModalMahasiswa = ({ isOpen, onClose, onSave, editData, angkatanList }) => 
           nomor_induk: editData.nomor_induk || '',
           nama_lengkap: editData.nama_lengkap || '',
           password: '', 
-          status_akademik: editData.status_akademik || 'aktif',
+          status_akademik: editData.status_akademik || 'AKTIF',
           jenis_kelamin: editData.jenis_kelamin || 'L',
           jurusan: editData.jurusan || '',
-          angkatan_id: editData.angkatan_id || '' 
+          angkatan_id: editData.angkatan_id || defaultAngkatanId,
+          kelas_id: editData.kelas_id || defaultKelasId
         });
       } else {
         // Jika mode Tambah: Cek apakah ada "Draft" yang tertinggal di LocalStorage
@@ -34,10 +35,10 @@ const ModalMahasiswa = ({ isOpen, onClose, onSave, editData, angkatanList }) => 
           try {
             setFormData(JSON.parse(savedDraft));
           } catch (e) {
-            setFormData(defaultForm);
+            setFormData({ ...defaultForm, angkatan_id: defaultAngkatanId, kelas_id: defaultKelasId });
           }
         } else {
-          setFormData(defaultForm);
+          setFormData({ ...defaultForm, angkatan_id: defaultAngkatanId, kelas_id: defaultKelasId });
         }
       }
       setErrorMsg('');
@@ -214,9 +215,11 @@ const ModalMahasiswa = ({ isOpen, onClose, onSave, editData, angkatanList }) => 
                   value={formData.status_akademik} 
                   onChange={(e) => setFormData({...formData, status_akademik: e.target.value})}
                 >
-                  <option value="aktif">Aktif</option>
-                  <option value="cuti">Cuti</option>
-                  <option value="tidak aktif">Tidak Aktif</option>
+                  <option value="AKTIF">Aktif</option>
+                  <option value="CUTI">Cuti</option>
+                  <option value="LULUS">Lulus</option>
+                  <option value="KELUAR">Keluar</option>
+                  <option value="RESIGN">Resign</option>
                 </select>
                 <ChevronDown className="absolute right-4 top-3.5 text-slate-400 pointer-events-none" size={18} strokeWidth={2.5} />
               </div>

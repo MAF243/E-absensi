@@ -19,7 +19,7 @@ async function seed() {
       const nama_lengkap = `Dr. Dosen Dummy ${i}, S.Kom., M.Kom.`;
       const inisial = `DD${i}`;
       const role = 'dosen';
-      const status_akademik = 'aktif';
+      const status_akademik = 'AKTIF';
       const jenis_kelamin = jk[i % 2];
       const jurusan = jurusanList[i % 3];
 

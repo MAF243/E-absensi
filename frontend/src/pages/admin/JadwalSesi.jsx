@@ -5,13 +5,6 @@ import DataTable from '../../components/common/DataTable';
 import axiosClient from '../../utils/axiosClient';
 import useUiStore from '../../store/useUiStore';
 
-const isKelompok = (name) => {
-  if (!name) return false;
-  const n = String(name).toUpperCase();
-  if (n.includes('INFORMATIKA') || n.includes('INROMATIKA')) return false;
-  return true;
-};
-
 // 1. MODAL ATUR JADWAL (DITAMBAH INPUT RUANGAN)
 const ModalAturJadwal = ({ isOpen, onClose, onSave, matkul }) => {
   const [formData, setFormData] = useState({ hari: '', jam_mulai: '', jam_selesai: '', target_pertemuan: 16, ruangan: '' });
@@ -249,9 +242,7 @@ const JadwalSesi = () => {
   };
 
   const getJurusanDisplay = (item) => {
-    if (item.jenis_kelas === 'kelompok' && item.kelompok_jurusan) return item.kelompok_jurusan;
-    if (item.angkatan_id && item.kelompok_jurusan) return item.kelompok_jurusan;
-    return '';
+    return item.jenis_kelas === 'kelompok' ? (item.nama_kelas || '') : (item.jurusan || '');
   };
 
   const allJurusans = jadwalList.flatMap(item => {
@@ -260,7 +251,7 @@ const JadwalSesi = () => {
     return j.split(',').map(s => s.trim());
   });
   const uniqueJurusan = [...new Set(allJurusans)].filter(Boolean);
-  const uniqueAngkatan = [...new Set(jadwalList.map(item => item.nama_angkatan).filter(Boolean))];
+  const uniqueAngkatan = [...new Set(jadwalList.map(item => getJurusanDisplay(item)).filter(Boolean))];
 
   const filteredJadwal = jadwalList.filter(item => {
     const matchesSearch = String(item.nama_mk).toLowerCase().includes(search.toLowerCase()) || String(item.kode_mk).toLowerCase().includes(search.toLowerCase());
@@ -268,33 +259,24 @@ const JadwalSesi = () => {
     const matchesHari = filterHari === '' || item.hari === filterHari;
     const displayJrs = getJurusanDisplay(item).toLowerCase();
     const matchesJurusan = filterJurusan === '' || displayJrs.includes(filterJurusan.toLowerCase());
-    const matchesAngkatan = filterAngkatan === '' || item.nama_angkatan === filterAngkatan;
+    const matchesAngkatan = filterAngkatan === '' || getJurusanDisplay(item) === filterAngkatan;
 
     return matchesSearch && matchesSemester && matchesHari && matchesJurusan && matchesAngkatan;
   });
 
   const columns = [
     {
-      header: 'Mata Kuliah & Angkatan',
+      header: 'Mata Kuliah & Kelompok / Jurusan',
       render: item => {
-        const finalJurusan = getJurusanDisplay(item);
-        let displayBadge = '';
-        if (item.jenis_kelas === 'kelompok') {
-          const jurusanKrs = finalJurusan || 'BELUM ADA PESERTA';
-          displayBadge = <div className="bg-amber-50 text-amber-700 border border-amber-100 px-3 py-1.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest w-fit mt-2">KRS: <span className="text-amber-500">{jurusanKrs}</span></div>;
-        } else if (item.nama_angkatan) {
-          const isKlp = isKelompok(item.nama_angkatan);
-          displayBadge = (
-            <div className={`mt-2 px-3 py-1.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest w-fit ${isKlp ? 'bg-rose-50 text-rose-700 border border-rose-100' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>
-              {isKlp ? `KLP: ${item.nama_angkatan}` : item.nama_angkatan}
-            </div>
-          );
-        }
+        const targetLabel = getJurusanDisplay(item);
+        const displayTarget = targetLabel
+          ? <span className="text-xs md:text-sm text-slate-500 mt-1 block">{targetLabel}</span>
+          : <span className="text-xs md:text-sm text-rose-500 italic mt-1 block">Belum ditentukan</span>;
         return (
           <>
-            <div className="font-bold text-slate-800 text-xs md:text-sm">{item.nama_mk}</div>
-            <div className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 mt-1">{item.kode_mk} • Smstr {item.semester}</div>
-            {displayBadge}
+            <div className="font-medium text-slate-800 text-xs md:text-sm">{item.nama_mk}</div>
+            <div className="text-[10px] md:text-[11px] font-medium uppercase tracking-widest text-slate-400 mt-1">{item.kode_mk} • Smstr {item.semester}</div>
+            {displayTarget}
           </>
         );
       }
@@ -306,15 +288,15 @@ const JadwalSesi = () => {
         const progressPercent = Math.min(((item.total_pertemuan || 0) / target) * 100, 100);
         return (
           <>
-            <div className="text-xs md:text-sm font-bold text-slate-700">{item.dosen_nama || <span className="text-[10px] font-black uppercase tracking-widest text-rose-500 bg-rose-50 px-2 py-1 rounded border border-rose-100">Dosen Kosong</span>}</div>
+            <div className={item.dosen_nama ? 'text-xs md:text-sm font-medium text-slate-700' : 'text-xs md:text-sm text-rose-500 italic'}>{item.dosen_nama || 'Dosen belum ditentukan'}</div>
             <div className="mt-1 space-y-1.5">
               {item.hari ? (
-                <span className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-blue-600"><Clock size={14} strokeWidth={2.5}/> {item.hari}, {item.jam_mulai}-{item.jam_selesai} WIB</span>
+                <span className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-medium uppercase tracking-widest text-blue-600"><Clock size={14} strokeWidth={2}/> {item.hari}, {item.jam_mulai}-{item.jam_selesai} WIB</span>
               ) : (
-                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-rose-500 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100 inline-block">Jadwal Belum Diatur</span>
+                <span className="text-xs text-rose-500 italic">Jadwal belum diatur</span>
               )}
               {item.ruangan && (
-                <span className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-emerald-600"><MapPin size={14} strokeWidth={2.5}/> {item.ruangan}</span>
+                <span className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-medium uppercase tracking-widest text-emerald-600"><MapPin size={14} strokeWidth={2}/> {item.ruangan}</span>
               )}
             </div>
             {item.hari && (
@@ -337,13 +319,13 @@ const JadwalSesi = () => {
       render: item => {
         if (item.sesi_aktif_id) {
           return (
-            <span className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm animate-pulse">
+              <span className="inline-flex items-center gap-2 text-emerald-700 text-xs md:text-sm font-medium uppercase tracking-widest animate-pulse">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></div> AKTIF ({item.sesi_tipe})
             </span>
           );
         } else {
           return (
-            <span className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200/60 text-slate-400 px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest">
+            <span className="inline-flex items-center gap-2 text-slate-400 text-xs md:text-sm font-medium uppercase tracking-widest">
               <div className="w-2.5 h-2.5 rounded-full bg-slate-300"></div> Menunggu Dosen
             </span>
           );
@@ -395,10 +377,11 @@ const JadwalSesi = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/40 p-4 md:p-6 animate-in fade-in duration-300">
+      <div className="bg-white rounded-[32px] border border-white shadow-[0_20px_60px_-24px_rgba(15,23,42,0.35)] p-3 md:p-5 animate-in fade-in duration-300">
         <DataTable 
           data={filteredJadwal}
           columns={columns}
+          containerClassName="border-0 rounded-[24px] shadow-none"
           emptyMessage="Tidak ada jadwal yang sesuai dengan filter."
           headerContent={
             <>

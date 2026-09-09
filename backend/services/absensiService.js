@@ -58,18 +58,25 @@ class AbsensiService {
     return await absensiRepository.getRiwayatDosen(dosen_id);
   }
   
-  async getDetailRekapSesi(sesi_id) {
-    const mk_id = await absensiRepository.getSesiMk(sesi_id);
-    if (!mk_id) {
+  async getDetailRekapSesi(sesi_id, actor) {
+    const sesi = await absensiRepository.getSesiInfo(sesi_id);
+    if (!sesi) {
       const err = new Error("Sesi tidak ditemukan");
       err.statusCode = 404;
       throw err;
     }
 
+    if (actor?.role === 'dosen' && Number(sesi.dosen_id) !== Number(actor.id)) {
+      const err = new Error('Anda tidak berwenang melihat rekap sesi ini.');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    const mk_id = sesi.mk_id;
     const mk = await absensiRepository.getMkInfo(mk_id);
     let mahasiswa = [];
     if (mk.jenis_kelas === 'paket') {
-      mahasiswa = await absensiRepository.getMahasiswaPaket(mk.angkatan_id, mk_id);
+      mahasiswa = await absensiRepository.getMahasiswaPaket(mk_id);
     } else {
       mahasiswa = await absensiRepository.getMahasiswaLintas(mk_id);
     }
@@ -92,7 +99,35 @@ class AbsensiService {
     return { data: result, mk_id, ringkasan };
   }
   
-  async simpanRekapManual(sesi_id, mk_id, rekap_data) {
+  async simpanRekapManual(sesi_id, mk_id, rekap_data, actor) {
+    const sesi = await absensiRepository.getSesiInfo(sesi_id);
+    if (!sesi || Number(sesi.mk_id) !== Number(mk_id)) {
+      const err = new Error('Sesi tidak valid untuk mata kuliah tersebut.');
+      err.statusCode = 400;
+      throw err;
+    }
+    if (actor?.role === 'dosen' && Number(sesi.dosen_id) !== Number(actor.id)) {
+      const err = new Error('Anda tidak berwenang mengubah rekap sesi ini.');
+      err.statusCode = 403;
+      throw err;
+    }
+    if (!Array.isArray(rekap_data)) {
+      const err = new Error('Data rekap tidak valid.');
+      err.statusCode = 400;
+      throw err;
+    }
+    const pesertaIds = await absensiRepository.getPesertaIds(mk_id);
+    const allowedStatuses = new Set(['hadir', 'izin', 'sakit', 'alpa']);
+    const submittedIds = new Set();
+    for (const item of rekap_data) {
+      const mahasiswaId = Number(item.user_id);
+      if (!pesertaIds.has(mahasiswaId) || submittedIds.has(mahasiswaId) || !allowedStatuses.has(String(item.status).toLowerCase())) {
+        const err = new Error('Data rekap memuat peserta atau status yang tidak valid.');
+        err.statusCode = 400;
+        throw err;
+      }
+      submittedIds.add(mahasiswaId);
+    }
     await absensiRepository.simpanRekapManual(sesi_id, mk_id, rekap_data);
   }
 }

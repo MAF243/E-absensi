@@ -28,20 +28,16 @@ class RekapRepository {
     const query = `
       SELECT u.id as user_id, mk.id as mk_id, mk.nama_mk 
       FROM users u
-      JOIN mata_kuliah mk ON (mk.jenis_kelas = 'paket' AND mk.angkatan_id = u.angkatan_id)
+      JOIN mata_kuliah mk ON mk.jenis_kelas = 'paket'
+        AND ((mk.kelas_id IS NOT NULL AND mk.kelas_id = u.kelas_id) OR (mk.kelas_id IS NULL AND mk.angkatan_id = u.angkatan_id) OR (mk.kelas_id IS NULL AND mk.jurusan = u.jurusan))
       WHERE u.id IN (?)
       UNION
       SELECT pk.mahasiswa_id as user_id, mk.id as mk_id, mk.nama_mk
       FROM peserta_kelas pk
       JOIN mata_kuliah mk ON pk.mk_id = mk.id
       WHERE pk.mahasiswa_id IN (?)
-      UNION
-      SELECT gm.mahasiswa_id as user_id, mk.id as mk_id, mk.nama_mk
-      FROM grup_mahasiswa gm
-      JOIN mata_kuliah mk ON gm.mk_id = mk.id
-      WHERE gm.mahasiswa_id IN (?)
     `;
-    const [results] = await db.query(query, [mhsIds, mhsIds, mhsIds]);
+    const [results] = await db.query(query, [mhsIds, mhsIds]);
     return results;
   }
 
@@ -58,7 +54,7 @@ class RekapRepository {
     // Wait, the earlier implementation didn't use bobot. I'll stick to COUNT(id) for now unless specified.
     // Note: To be aligned with Sesi cancellation rules, CANCELLED sessions should not be counted.
     const [sesiAktif] = await db.query(`
-      SELECT mk_id, COUNT(id) as total_sesi_berjalan
+      SELECT mk_id, COALESCE(SUM(bobot), 0) as total_sesi_berjalan
       FROM sesi_kuliah
       WHERE status = 'selesai' ${dateFilter}
       GROUP BY mk_id

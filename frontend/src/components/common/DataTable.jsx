@@ -9,7 +9,8 @@ const DataTable = ({
   onSelectionChange = null,
   keyField = 'id',
   emptyMessage = 'Tidak ada data yang dapat ditampilkan.',
-  isLoading = false
+  isLoading = false,
+  containerClassName = ''
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -46,7 +47,7 @@ const DataTable = ({
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 flex flex-col overflow-hidden w-full">
+    <div className={`bg-white rounded-3xl border border-slate-200 flex flex-col overflow-hidden w-full ${containerClassName}`}>
       
       {/* Header Slot (Filter, Search, dll) */}
       {headerContent && (
