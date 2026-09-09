@@ -21,6 +21,21 @@ const normalizeDosenStatus = (value) => {
   return String(value || 'AKTIF').trim().toUpperCase() === 'AKTIF' ? 'AKTIF' : 'KELUAR';
 };
 
+const resolveProdiId = async (value) => {
+  const prodiId = Number(value);
+  if (Number.isInteger(prodiId) && prodiId > 0) {
+    const [rows] = await db.query('SELECT id FROM prodi WHERE id = ? AND aktif = 1', [prodiId]);
+    if (rows.length) return prodiId;
+  }
+  const [defaults] = await db.query('SELECT id FROM prodi WHERE aktif = 1 ORDER BY id ASC LIMIT 1');
+  if (!defaults.length) {
+    const error = new Error('Belum ada prodi aktif yang dapat dipilih.');
+    error.statusCode = 400;
+    throw error;
+  }
+  return defaults[0].id;
+};
+
 class UserService {
   async getAll(role) {
     return await userRepository.findAllByRole(role);
@@ -40,6 +55,7 @@ class UserService {
     try {
       if (data.role === 'dosen') data.status_akademik = normalizeDosenStatus(data.status_akademik);
       data.status_akademik = normalizeAcademicStatus(data.status_akademik);
+      if (data.role === 'mahasiswa') data.prodi_id = await resolveProdiId(data.prodi_id);
       if (data.role === 'mahasiswa' && data.nomor_induk && data.nomor_induk.length >= 8) {
          const kodeProdi = data.nomor_induk.substring(2, 4);
          const kodeAngkatan = data.nomor_induk.substring(4, 6);
@@ -88,6 +104,7 @@ class UserService {
     try {
       if (data.role === 'dosen') data.status_akademik = normalizeDosenStatus(data.status_akademik);
       data.status_akademik = normalizeAcademicStatus(data.status_akademik);
+      if (data.role === 'mahasiswa') data.prodi_id = await resolveProdiId(data.prodi_id);
       if (data.password && data.password.trim() !== "") {
         data.password = await bcrypt.hash(data.password, 10);
       } else {
@@ -180,7 +197,8 @@ class UserService {
 
         const plainPassword = row.password || row.nomor_induk;
         const hashedPassword = await bcrypt.hash(plainPassword.toString(), 10);
-        values.push([row.nomor_induk, row.nama_lengkap, hashedPassword, role, row.status_akademik, row.jenis_kelamin || null, row.jurusan || null, row.angkatan_id || null, row.kelas_id || null]);
+        if (role === 'mahasiswa') row.prodi_id = await resolveProdiId(row.prodi_id);
+        values.push([row.nomor_induk, row.nama_lengkap, hashedPassword, role, row.status_akademik, row.jenis_kelamin || null, row.jurusan || null, row.prodi_id || null, row.angkatan_id || null, row.kelas_id || null]);
       }
       await userRepository.bulkCreate(values);
     } catch (err) {

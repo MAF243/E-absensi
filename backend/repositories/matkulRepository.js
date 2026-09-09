@@ -3,7 +3,7 @@ const db = require('../config/db');
 class MatkulRepository {
   async findAll() {
     const query = `
-      SELECT m.*, u.nama_lengkap as nama_dosen, a.nama_angkatan, k.nama_kelas, p.nama_periode,
+      SELECT m.*, pr.nama_prodi, u.nama_lengkap as nama_dosen, a.nama_angkatan, k.nama_kelas, p.nama_periode,
              (SELECT COUNT(*) FROM sesi_kuliah WHERE mk_id = m.id) as jumlah_sesi,
              (SELECT COUNT(*) FROM peserta_kelas WHERE mk_id = m.id) as jumlah_peserta
       FROM mata_kuliah m
@@ -11,6 +11,7 @@ class MatkulRepository {
       LEFT JOIN angkatan a ON m.angkatan_id = a.id
       LEFT JOIN kelas k ON m.kelas_id = k.id
       LEFT JOIN periode_akademik p ON m.periode_id = p.id
+      LEFT JOIN prodi pr ON m.prodi_id = pr.id
       ORDER BY m.created_at DESC
     `;
     const [results] = await db.query(query);
@@ -18,11 +19,11 @@ class MatkulRepository {
   }
   
   async create(data) {
-    await db.query("INSERT INTO mata_kuliah (kode_mk, nama_mk, sks, jurusan, semester, periode_id) VALUES (?, ?, ?, ?, ?, ?)", [data.kode_mk, data.nama_mk, data.sks || 2, data.jurusan, data.semester, data.periode_id || null]);
+    await db.query("INSERT INTO mata_kuliah (kode_mk, nama_mk, sks, jurusan, prodi_id, semester, periode_id) VALUES (?, ?, ?, ?, ?, ?, ?)", [data.kode_mk, data.nama_mk, data.sks || 2, data.jurusan, data.prodi_id || null, data.semester, data.periode_id || null]);
   }
 
   async update(id, data) {
-    await db.query("UPDATE mata_kuliah SET kode_mk=?, nama_mk=?, sks=?, jurusan=?, semester=?, periode_id=? WHERE id=?", [data.kode_mk, data.nama_mk, data.sks, data.jurusan, data.semester, data.periode_id || null, id]);
+    await db.query("UPDATE mata_kuliah SET kode_mk=?, nama_mk=?, sks=?, jurusan=?, prodi_id=?, semester=?, periode_id=? WHERE id=?", [data.kode_mk, data.nama_mk, data.sks, data.jurusan, data.prodi_id || null, data.semester, data.periode_id || null, id]);
   }
 
   async delete(id) {
@@ -39,8 +40,8 @@ class MatkulRepository {
 
   async assignMatkul(id, data) {
     const isKelompok = data.jenis_kelas === 'kelompok';
-    await db.query("UPDATE mata_kuliah SET dosen_id=?, kelas_id=?, jurusan=?, jenis_kelas=? WHERE id=?", 
-      [data.dosen_id || null, isKelompok ? (data.kelas_id || null) : null, isKelompok ? null : (data.jurusan || null), data.jenis_kelas, id]);
+    await db.query("UPDATE mata_kuliah SET dosen_id=?, kelas_id=?, jurusan=?, prodi_id=?, jenis_kelas=? WHERE id=?", 
+      [data.dosen_id || null, isKelompok ? (data.kelas_id || null) : null, isKelompok ? null : (data.jurusan || null), data.prodi_id || null, data.jenis_kelas, id]);
     
     await db.query("DELETE FROM peserta_kelas WHERE mk_id=?", [id]);
     if (data.jenis_kelas === 'kelompok' && data.peserta && data.peserta.length > 0) {
@@ -102,8 +103,8 @@ class MatkulRepository {
   }
 
   async bulkCreate(data) {
-    const values = data.map(d => [d.kode_mk, d.nama_mk, d.sks || 2, d.jurusan || '', d.semester || 'Ganjil', d.periode_id || null]);
-    await db.query("INSERT INTO mata_kuliah (kode_mk, nama_mk, sks, jurusan, semester, periode_id) VALUES ?", [values]);
+    const values = data.map(d => [d.kode_mk, d.nama_mk, d.sks || 2, d.jurusan || '', d.prodi_id || null, d.semester || 'Ganjil', d.periode_id || null]);
+    await db.query("INSERT INTO mata_kuliah (kode_mk, nama_mk, sks, jurusan, prodi_id, semester, periode_id) VALUES ?", [values]);
   }
 }
 module.exports = new MatkulRepository();

@@ -7,15 +7,18 @@ import AngkatanManager from '../../components/admin/AngkatanManager';
 import useUiStore from '../../store/useUiStore';
 import axiosClient from '../../utils/axiosClient';
 import DataTable from '../../components/common/DataTable';
+import ProdiManager from '../../components/admin/ProdiManager';
 
 const DataMahasiswa = () => {
   const { showConfirm } = useUiStore();
   const [activeTab, setActiveTab] = useState('mahasiswa');
   const [students, setStudents] = useState([]);
   const [angkatanList, setAngkatanList] = useState([]);
+  const [prodiList, setProdiList] = useState([]);
   
   const [search, setSearch] = useState('');
   const [filterJurusan, setFilterJurusan] = useState('');
+  const [filterProdi, setFilterProdi] = useState('');
   const [filterAngkatan, setFilterAngkatan] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [isBulkEditOpen, setBulkEditOpen] = useState(false);
@@ -51,12 +54,14 @@ const DataMahasiswa = () => {
 
   const fetchData = async () => {
     try {
-      const [resM, resA] = await Promise.all([
+      const [resM, resA, resP] = await Promise.all([
         axiosClient.get('/mahasiswa').then(r => r.data).catch(() => ({ data: [] })),
-        axiosClient.get('/angkatan').then(r => r.data).catch(() => ({ data: [] }))
+        axiosClient.get('/angkatan').then(r => r.data).catch(() => ({ data: [] })),
+        axiosClient.get('/prodi?include_inactive=true').then(r => r.data).catch(() => ({ data: [] }))
       ]);
       setStudents(resM.data || []);
       setAngkatanList(resA.data || []);
+      setProdiList(resP.data || []);
     } catch (error) {}
   };
 
@@ -95,13 +100,14 @@ const DataMahasiswa = () => {
   const filteredStudents = students.filter(s => {
     const matchSearch = String(s.nama_lengkap || '').toLowerCase().includes(search.toLowerCase()) || String(s.nomor_induk || '').toLowerCase().includes(search.toLowerCase());
     const matchJurusan = filterJurusan === '' || s.jurusan === filterJurusan;
+    const matchProdi = filterProdi === '' || String(s.prodi_id) === String(filterProdi);
     const matchAngkatan = filterAngkatan === '' || 
         String(s.angkatan_id) === String(filterAngkatan) || 
         (s.list_kelompok_id && String(s.list_kelompok_id).split(',').includes(String(filterAngkatan)));
-    return matchSearch && matchJurusan && matchAngkatan;
+    return matchSearch && matchJurusan && matchProdi && matchAngkatan;
   });
 
-  useEffect(() => { setCurrentPage(1); }, [search, filterJurusan, filterAngkatan, itemsPerPage]);
+  useEffect(() => { setCurrentPage(1); }, [search, filterJurusan, filterProdi, filterAngkatan, itemsPerPage]);
 
   const totalItems = filteredStudents.length;
   const totalPages = itemsPerPage === 'All' ? 1 : Math.ceil(totalItems / itemsPerPage);
@@ -220,6 +226,7 @@ const DataMahasiswa = () => {
         <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm w-full md:w-fit overflow-x-auto shrink-0">
           <button onClick={() => { setActiveTab('mahasiswa'); setSelectedIds([]); }} className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 ${activeTab === 'mahasiswa' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}><Users size={16}/> Data Mahasiswa</button>
           <button onClick={() => { setActiveTab('angkatan'); setSelectedIds([]); }} className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 ${activeTab === 'angkatan' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}><BookOpen size={16}/> Kelompok & Angkatan</button>
+          <button onClick={() => { setActiveTab('prodi'); setSelectedIds([]); }} className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 ${activeTab === 'prodi' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}><GraduationCap size={16}/> Prodi</button>
         </div>
       </div>
 
@@ -230,6 +237,7 @@ const DataMahasiswa = () => {
             <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full xl:w-auto min-w-0">
               <div className="relative w-full sm:w-56 shrink-0"><Search className="absolute left-3.5 top-2.5 text-slate-400" size={17} /><input type="text" placeholder="Cari NIM/Nama..." className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
               <select className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs text-slate-600 w-full sm:w-auto" value={filterJurusan} onChange={(e) => setFilterJurusan(e.target.value)}><option value="">Semua Jurusan</option>{opsiJurusan.map((j, i) => <option key={i} value={j}>{j}</option>)}</select>
+              <select className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs text-slate-600 w-full sm:w-auto" value={filterProdi} onChange={(e) => setFilterProdi(e.target.value)}><option value="">Semua Prodi</option>{prodiList.filter((prodi) => prodi.aktif).map((prodi) => <option key={prodi.id} value={prodi.id}>{prodi.nama_prodi}</option>)}</select>
               <select className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs text-slate-600 w-full sm:w-auto" value={filterAngkatan} onChange={(e) => setFilterAngkatan(e.target.value)}><option value="">Semua Angkatan</option>{angkatanList.map((a) => <option key={a.id} value={a.id}>{a.nama_angkatan}</option>)}</select>
             </div>
             <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto mt-2 xl:mt-0">
@@ -250,6 +258,7 @@ const DataMahasiswa = () => {
                   <th className="px-4 md:px-6 py-4 text-xs font-bold uppercase text-slate-500 text-center">L/P</th>
                   <th className="px-4 md:px-6 py-4 text-xs font-bold uppercase text-slate-500">Jurusan / Angkatan</th>
                   <th className="px-4 md:px-6 py-4 text-xs font-bold uppercase text-slate-500 text-center">Status</th>
+                  <th className="px-4 md:px-6 py-4 text-xs font-bold uppercase text-slate-500">Prodi</th>
                   <th className="px-4 md:px-6 py-4 text-xs font-bold uppercase text-slate-500 text-center">Aksi</th>
                 </tr>
               </thead>
@@ -270,6 +279,7 @@ const DataMahasiswa = () => {
                         </div>
                       </td>
                       <td className="px-4 md:px-6 py-3 md:py-4 text-center"><span className={`px-2 py-1 rounded-md text-[11px] font-bold border uppercase ${safeStatus === 'aktif' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{s.status_akademik || 'AKTIF'}</span></td>
+                      <td className="px-4 md:px-6 py-3 md:py-4 font-bold text-slate-700 text-sm">{s.nama_prodi || '-'}</td>
                       <td className="px-4 md:px-6 py-3 md:py-4 text-center">
                         <div className="flex justify-end gap-1">
                           <button onClick={() => { setProfileData(s); setProfileOpen(true); }} className="p-1.5 md:p-2 text-slate-400 hover:text-blue-600 rounded-lg"><Eye size={18}/></button>
@@ -293,10 +303,14 @@ const DataMahasiswa = () => {
             </div>
           </div>
         </div>
-      ) : (
+      ) : activeTab === 'angkatan' ? (
         /* TAB 2: MANAJEMEN KELOMPOK & ANGKATAN */
         <div className="flex flex-col gap-6 animate-in fade-in duration-300">
            <AngkatanManager />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+          <ProdiManager onChanged={fetchData} />
         </div>
       )}
 
@@ -315,8 +329,8 @@ const DataMahasiswa = () => {
         </div>
       )}
 
-      <ModalMahasiswa isOpen={isFormOpen} onClose={() => setFormOpen(false)} onSave={handleSaveStudent} editData={selectedStudent} angkatanList={angkatanList} />
-      <ModalUploadCSV isOpen={isCsvOpen} onClose={() => setCsvOpen(false)} onSuccess={() => { fetchData(); showToast("Data massal ditambahkan!", "success"); }} angkatanList={angkatanList} />
+      <ModalMahasiswa isOpen={isFormOpen} onClose={() => setFormOpen(false)} onSave={handleSaveStudent} editData={selectedStudent} angkatanList={angkatanList} prodiList={prodiList} />
+      <ModalUploadCSV isOpen={isCsvOpen} onClose={() => setCsvOpen(false)} onSuccess={() => { fetchData(); showToast("Data massal ditambahkan!", "success"); }} angkatanList={angkatanList} prodiList={prodiList} />
 
       {isBulkEditOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setBulkEditOpen(false)}>

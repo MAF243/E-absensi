@@ -1,7 +1,7 @@
 const db = require('../config/db');
 
 class RekapRepository {
-  async getMahasiswaFiltered(angkatan_id, jurusan) {
+  async getMahasiswaFiltered(angkatan_id, jurusan, prodi_id) {
     let whereUser = "u.role = 'mahasiswa'";
     let paramsUser = [];
 
@@ -13,10 +13,14 @@ class RekapRepository {
       whereUser += " AND u.jurusan = ?";
       paramsUser.push(jurusan);
     }
+    if (prodi_id) {
+      whereUser += " AND u.prodi_id = ?";
+      paramsUser.push(prodi_id);
+    }
 
     const [mahasiswa] = await db.query(`
-      SELECT u.id, u.nomor_induk, u.nama_lengkap, u.jenis_kelamin, u.jurusan, a.nama_angkatan
-      FROM users u LEFT JOIN angkatan a ON u.angkatan_id = a.id
+      SELECT u.id, u.nomor_induk, u.nama_lengkap, u.jenis_kelamin, u.jurusan, u.prodi_id, p.nama_prodi, a.nama_angkatan
+      FROM users u LEFT JOIN angkatan a ON u.angkatan_id = a.id LEFT JOIN prodi p ON u.prodi_id = p.id
       WHERE ${whereUser} ORDER BY u.nama_lengkap ASC
     `, paramsUser);
 
@@ -29,6 +33,7 @@ class RekapRepository {
       SELECT u.id as user_id, mk.id as mk_id, mk.nama_mk 
       FROM users u
       JOIN mata_kuliah mk ON mk.jenis_kelas = 'paket'
+        AND (mk.prodi_id IS NULL OR mk.prodi_id = u.prodi_id)
         AND ((mk.kelas_id IS NOT NULL AND mk.kelas_id = u.kelas_id) OR (mk.kelas_id IS NULL AND mk.angkatan_id = u.angkatan_id) OR (mk.kelas_id IS NULL AND mk.jurusan = u.jurusan))
       WHERE u.id IN (?)
       UNION

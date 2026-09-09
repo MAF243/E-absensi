@@ -9,10 +9,12 @@ import DataTable from '../../components/common/DataTable';
 const RekapAbsensi = () => {
   const [activeTab, setActiveTab] = useState('mahasiswa');
   const [angkatanList, setAngkatanList] = useState([]);
+  const [prodiList, setProdiList] = useState([]);
   
   // State Filter
   const [filterAngkatan, setFilterAngkatan] = useState('');
   const [filterJurusan, setFilterJurusan] = useState('');
+  const [filterProdi, setFilterProdi] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -24,7 +26,13 @@ const RekapAbsensi = () => {
   const { showToast } = useUiStore();
 
   useEffect(() => {
-    axiosClient.get(`/angkatan`).then(r => r.data).then(res => { if(res.success) setAngkatanList(res.data); }).catch(()=>({}));
+    Promise.all([
+      axiosClient.get(`/angkatan`).then(r => r.data),
+      axiosClient.get(`/prodi`).then(r => r.data)
+    ]).then(([angkatanRes, prodiRes]) => {
+      if (angkatanRes.success) setAngkatanList(angkatanRes.data);
+      if (prodiRes.success) setProdiList(prodiRes.data);
+    }).catch(()=>({}));
     // Set default date: 1 bulan terakhir
     const date = new Date();
     const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
@@ -39,7 +47,7 @@ const RekapAbsensi = () => {
     try {
       if (activeTab === 'mahasiswa') {
         const queryParams = new URLSearchParams({
-          angkatan_id: filterAngkatan, jurusan: filterJurusan, start_date: startDate, end_date: endDate
+          angkatan_id: filterAngkatan, jurusan: filterJurusan, prodi_id: filterProdi, start_date: startDate, end_date: endDate
         }).toString();
         const res = await axiosClient.get(`/rekap/mahasiswa?${queryParams}`).then(r => r.data);
         
@@ -215,7 +223,8 @@ const RekapAbsensi = () => {
     { header: 'No', accessor: 'absolute_index', className: 'text-center', tdClassName: 'text-center text-slate-400 font-bold w-12 border-r border-slate-100/60' },
     { header: 'NIM', accessor: 'nomor_induk', tdClassName: 'font-black tracking-widest text-slate-500 text-xs' },
     { header: 'Nama Mahasiswa', accessor: 'nama_lengkap', tdClassName: 'font-bold text-slate-800' },
-    { header: 'Jurusan', accessor: 'jurusan', className: 'text-center', tdClassName: 'text-center font-black uppercase tracking-widest text-blue-600', render: (row) => row.jurusan || '-' },
+    { header: 'Prodi', accessor: 'nama_prodi', className: 'text-center', tdClassName: 'text-center font-black tracking-widest text-blue-600', render: (row) => row.nama_prodi || '-' },
+    { header: 'Jurusan', accessor: 'jurusan', className: 'text-center', tdClassName: 'text-center font-black uppercase tracking-widest text-slate-600', render: (row) => row.jurusan || '-' },
     { header: 'AKM%', accessor: 'akm', className: 'text-center text-blue-600', tdClassName: 'text-center font-black text-blue-600', render: (row) => `${row.akm}%` }
   ];
 
@@ -272,6 +281,13 @@ const RekapAbsensi = () => {
               <div className="animate-in fade-in">
                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Ketik Jurusan (Opsional)</label>
                 <input type="text" placeholder="Cth: ITK, SI, APQ..." className="w-full bg-slate-50 border border-slate-200/60 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white text-sm font-black tracking-widest text-slate-700 uppercase transition-all placeholder:font-medium placeholder:tracking-normal placeholder:normal-case placeholder:text-slate-400" value={filterJurusan} onChange={e => setFilterJurusan(e.target.value.toUpperCase())}/>
+              </div>
+              <div className="animate-in fade-in">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Prodi</label>
+                <select className="w-full bg-slate-50 border border-slate-200/60 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white text-sm font-bold text-slate-700 transition-all cursor-pointer" value={filterProdi} onChange={e => setFilterProdi(e.target.value)}>
+                  <option value="">-- Semua Prodi --</option>
+                  {prodiList.map(prodi => <option key={prodi.id} value={prodi.id}>{prodi.nama_prodi}</option>)}
+                </select>
               </div>
             </>
           )}

@@ -68,6 +68,8 @@ Dokumen ini membedakan tiga keadaan: **tersedia** berarti alurnya sudah didukung
 #### Data mahasiswa dan kategori
 
 - CRUD mahasiswa berisi NIM, nama, kata sandi, status akademik, jenis kelamin, jurusan, dan angkatan utama.
+- Prodi mahasiswa dipilih dari master `prodi` melalui dropdown; prodi bukan field teks bebas dan berbeda dari jurusan maupun kelas.
+- Admin dapat mengelola master prodi (nama, kode, dan status aktif). Prodi nonaktif tidak muncul sebagai pilihan data baru, tetapi tetap tampil pada data lama yang masih menggunakannya.
 - Impor massal CSV mahasiswa; kata sandi dapat diisi atau memakai NIM sebagai nilai awal.
 - Pencarian, filter, pagination, pemilihan banyak data, hapus massal, dan pengubahan jurusan massal.
 - CRUD kategori angkatan/kelompok.
@@ -84,6 +86,7 @@ Dokumen ini membedakan tiga keadaan: **tersedia** berarti alurnya sudah didukung
 #### Mata kuliah dan peserta
 
 - CRUD dan impor CSV mata kuliah: kode, nama, SKS, jurusan, dan semester.
+- Mata kuliah dapat dikaitkan dengan prodi untuk menyelaraskan plotting dan filter akademik.
 - Penugasan dosen dan dua model kelas:
   - `paket`: seluruh mahasiswa pada angkatan/kelompok yang ditugaskan menjadi peserta;
   - `kelompok`: peserta dipilih secara eksplisit sebagai kelas lintas/KRS.
@@ -143,6 +146,7 @@ Dokumen ini membedakan tiga keadaan: **tersedia** berarti alurnya sudah didukung
 | Entitas                                     | Keterangan utama                                                                                                                         |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `users`                                     | Akun admin, dosen, dan mahasiswa; mencakup identitas, peran, kata sandi ter-hash, status akademik, jurusan, angkatan, dan login terakhir |
+| `prodi`                                     | Master program studi; menyimpan nama, kode, dan status aktif                                                                             |
 | `angkatan`                                  | Kategori angkatan atau kelompok mahasiswa                                                                                                |
 | `grup_mahasiswa`                            | Keanggotaan tambahan mahasiswa pada kelompok                                                                                             |
 | `mata_kuliah`                               | Master mata kuliah, dosen penanggung jawab, model kelas, angkatan, dan jadwal                                                            |
@@ -290,6 +294,7 @@ Pengaturan sensitif—email, kata sandi, lokasi/radius, dan masa sesi—memerluk
 | Kelas       | CRUD dan pengelolaan peserta melalui `/api/kelas`                                            |
 | Mata kuliah | CRUD `/api/matkul`, penugasan dan peserta kelas                                              |
 | Periode     | CRUD `/api/periode`                                                                          |
+| Prodi       | CRUD admin `/api/prodi`                                                                      |
 | Jadwal/sesi | `GET /api/jadwal`, buka/tutup sesi, jadwal mahasiswa, dan `DELETE /api/jadwal/sesi/:sesi_id` |
 | Absensi     | `POST /api/absensi/scan`, riwayat dosen, detail sesi, rekap manual                           |
 | Rekap       | `GET /api/rekap/mahasiswa`, `GET /api/rekap/dosen`                                           |

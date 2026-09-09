@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, AlertCircle, ChevronDown } from 'lucide-react';
 
-const ModalMahasiswa = ({ isOpen, onClose, onSave, editData, angkatanList, defaultAngkatanId = '', defaultKelasId = '' }) => {
+const ModalMahasiswa = ({ isOpen, onClose, onSave, editData, angkatanList, prodiList, defaultAngkatanId = '', defaultKelasId = '' }) => {
   // Nilai bawaan form kosong
   const defaultForm = { 
     nomor_induk: '', nama_lengkap: '', password: '', status_akademik: 'AKTIF',
-    jenis_kelamin: 'L', jurusan: '', angkatan_id: '', kelas_id: '' 
+    jenis_kelamin: 'L', jurusan: '', prodi_id: '', angkatan_id: '', kelas_id: ''
   };
 
   const [formData, setFormData] = useState(defaultForm);
@@ -25,6 +25,7 @@ const ModalMahasiswa = ({ isOpen, onClose, onSave, editData, angkatanList, defau
           status_akademik: editData.status_akademik || 'AKTIF',
           jenis_kelamin: editData.jenis_kelamin || 'L',
           jurusan: editData.jurusan || '',
+          prodi_id: editData.prodi_id || '',
           angkatan_id: editData.angkatan_id || defaultAngkatanId,
           kelas_id: editData.kelas_id || defaultKelasId
         });
@@ -172,6 +173,17 @@ const ModalMahasiswa = ({ isOpen, onClose, onSave, editData, angkatanList, defau
                 value={formData.jurusan} 
                 onChange={(e) => setFormData({...formData, jurusan: e.target.value})} 
               />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-2 tracking-wide uppercase">Prodi <span className="text-rose-500">*</span></label>
+              <div className="relative">
+                <select required className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-semibold rounded-2xl px-5 py-3.5 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white transition-all appearance-none cursor-pointer" value={formData.prodi_id} onChange={(e) => setFormData({ ...formData, prodi_id: e.target.value })}>
+                  <option value="">Pilih Prodi</option>
+                  {prodiList?.filter((prodi) => prodi.aktif || String(prodi.id) === String(formData.prodi_id)).map((prodi) => <option key={prodi.id} value={prodi.id}>{prodi.nama_prodi}</option>)}
+                </select>
+                <ChevronDown className="absolute right-4 top-3.5 text-slate-400 pointer-events-none" size={18} strokeWidth={2.5} />
+              </div>
             </div>
 
             <div ref={wrapperRef} className="relative">

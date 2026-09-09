@@ -2,8 +2,8 @@ const rekapRepository = require('../repositories/rekapRepository');
 
 class RekapService {
   async getRekapMahasiswa(query) {
-    const { angkatan_id, jurusan, start_date, end_date } = query;
-    const mahasiswa = await rekapRepository.getMahasiswaFiltered(angkatan_id, jurusan);
+    const { angkatan_id, jurusan, prodi_id, start_date, end_date } = query;
+    const mahasiswa = await rekapRepository.getMahasiswaFiltered(angkatan_id, jurusan, prodi_id);
     if (mahasiswa.length === 0) return [];
 
     const mhsIds = mahasiswa.map(m => m.id);

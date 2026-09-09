@@ -4,10 +4,11 @@ class UserRepository {
   async findAllByRole(role) {
     if (role === 'mahasiswa') {
       const query = `
-        SELECT u.id, u.nomor_induk, u.nama_lengkap, u.status_akademik, u.jenis_kelamin, u.jurusan, u.angkatan_id, u.kelas_id, a.nama_angkatan, k.nama_kelas
+        SELECT u.id, u.nomor_induk, u.nama_lengkap, u.status_akademik, u.jenis_kelamin, u.jurusan, u.prodi_id, p.nama_prodi, u.angkatan_id, u.kelas_id, a.nama_angkatan, k.nama_kelas
         FROM users u 
         LEFT JOIN angkatan a ON u.angkatan_id = a.id
         LEFT JOIN kelas k ON u.kelas_id = k.id
+        LEFT JOIN prodi p ON u.prodi_id = p.id
         WHERE u.role = 'mahasiswa' ORDER BY u.created_at DESC
       `;
       const [results] = await db.query(query);
@@ -20,25 +21,25 @@ class UserRepository {
   }
 
   async findByIdAndRole(id, role) {
-    const query = `SELECT u.id, u.nomor_induk, u.nama_lengkap, u.status_akademik, u.jenis_kelamin, u.jurusan, u.angkatan_id, u.kelas_id, u.last_login, a.nama_angkatan, k.nama_kelas FROM users u LEFT JOIN angkatan a ON u.angkatan_id = a.id LEFT JOIN kelas k ON u.kelas_id = k.id WHERE u.id = ? AND u.role = ?`;
+    const query = `SELECT u.id, u.nomor_induk, u.nama_lengkap, u.status_akademik, u.jenis_kelamin, u.jurusan, u.prodi_id, p.nama_prodi, u.angkatan_id, u.kelas_id, u.last_login, a.nama_angkatan, k.nama_kelas FROM users u LEFT JOIN angkatan a ON u.angkatan_id = a.id LEFT JOIN kelas k ON u.kelas_id = k.id LEFT JOIN prodi p ON u.prodi_id = p.id WHERE u.id = ? AND u.role = ?`;
     const [results] = await db.query(query, [id, role]);
     return results[0];
   }
 
   async create(data) {
-    const query = `INSERT INTO users (nomor_induk, nama_lengkap, password, role, status_akademik, jenis_kelamin, jurusan, angkatan_id, kelas_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    const [result] = await db.query(query, [data.nomor_induk, data.nama_lengkap, data.password, data.role, data.status_akademik || 'aktif', data.jenis_kelamin || null, data.jurusan || null, data.angkatan_id || null, data.kelas_id || null]);
+    const query = `INSERT INTO users (nomor_induk, nama_lengkap, password, role, status_akademik, jenis_kelamin, jurusan, prodi_id, angkatan_id, kelas_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const [result] = await db.query(query, [data.nomor_induk, data.nama_lengkap, data.password, data.role, data.status_akademik || 'AKTIF', data.jenis_kelamin || null, data.jurusan || null, data.prodi_id || null, data.angkatan_id || null, data.kelas_id || null]);
     return result.insertId;
   }
 
   async update(id, data) {
     let query, params;
     if (data.password) {
-      query = `UPDATE users SET nomor_induk=?, nama_lengkap=?, password=?, status_akademik=?, jenis_kelamin=?, jurusan=?, angkatan_id=?, kelas_id=? WHERE id=? AND role=?`;
-      params = [data.nomor_induk, data.nama_lengkap, data.password, data.status_akademik, data.jenis_kelamin || null, data.jurusan || null, data.angkatan_id || null, data.kelas_id || null, id, data.role];
+      query = `UPDATE users SET nomor_induk=?, nama_lengkap=?, password=?, status_akademik=?, jenis_kelamin=?, jurusan=?, prodi_id=?, angkatan_id=?, kelas_id=? WHERE id=? AND role=?`;
+      params = [data.nomor_induk, data.nama_lengkap, data.password, data.status_akademik, data.jenis_kelamin || null, data.jurusan || null, data.prodi_id || null, data.angkatan_id || null, data.kelas_id || null, id, data.role];
     } else {
-      query = `UPDATE users SET nomor_induk=?, nama_lengkap=?, status_akademik=?, jenis_kelamin=?, jurusan=?, angkatan_id=?, kelas_id=? WHERE id=? AND role=?`;
-      params = [data.nomor_induk, data.nama_lengkap, data.status_akademik, data.jenis_kelamin || null, data.jurusan || null, data.angkatan_id || null, data.kelas_id || null, id, data.role];
+      query = `UPDATE users SET nomor_induk=?, nama_lengkap=?, status_akademik=?, jenis_kelamin=?, jurusan=?, prodi_id=?, angkatan_id=?, kelas_id=? WHERE id=? AND role=?`;
+      params = [data.nomor_induk, data.nama_lengkap, data.status_akademik, data.jenis_kelamin || null, data.jurusan || null, data.prodi_id || null, data.angkatan_id || null, data.kelas_id || null, id, data.role];
     }
     const [result] = await db.query(query, params);
     return result.affectedRows > 0;
@@ -76,7 +77,7 @@ class UserRepository {
   }
   
   async bulkCreate(values) {
-    await db.query("INSERT INTO users (nomor_induk, nama_lengkap, password, role, status_akademik, jenis_kelamin, jurusan, angkatan_id, kelas_id) VALUES ?", [values]);
+    await db.query("INSERT INTO users (nomor_induk, nama_lengkap, password, role, status_akademik, jenis_kelamin, jurusan, prodi_id, angkatan_id, kelas_id) VALUES ?", [values]);
   }
   
   async bulkAssignKelas(ids, kelas_id) {

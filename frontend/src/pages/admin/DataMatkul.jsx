@@ -91,8 +91,8 @@ const SearchableSelect = ({ options, value, onChange, placeholder, groups = null
 // ==========================================
 // 1. KOMPONEN MODAL: MASTER MATKUL
 // ==========================================
-const ModalMasterMatkul = ({ isOpen, onClose, onSave, editData, mahasiswaList }) => {
-  const [formData, setFormData] = useState({ kode_mk: '', nama_mk: '', sks: 2, jurusan: '', semester: 'Ganjil' });
+const ModalMasterMatkul = ({ isOpen, onClose, onSave, editData, mahasiswaList, prodiList }) => {
+  const [formData, setFormData] = useState({ kode_mk: '', nama_mk: '', sks: 2, jurusan: '', prodi_id: '', semester: 'Ganjil' });
 
   useEffect(() => {
     if (isOpen) {
@@ -118,12 +118,12 @@ const ModalMasterMatkul = ({ isOpen, onClose, onSave, editData, mahasiswaList })
           }
         }
 
-        setFormData({ ...editData, jurusan: syncJurusan, semester: editData.semester || 'Ganjil' });
+        setFormData({ ...editData, jurusan: syncJurusan, prodi_id: editData.prodi_id || '', semester: editData.semester || 'Ganjil' });
       } else {
-        setFormData({ kode_mk: '', nama_mk: '', sks: 2, jurusan: '', semester: 'Ganjil' });
+        setFormData({ kode_mk: '', nama_mk: '', sks: 2, jurusan: '', prodi_id: prodiList?.find((prodi) => prodi.aktif)?.id || '', semester: 'Ganjil' });
       }
     }
-  }, [isOpen, editData, mahasiswaList]);
+  }, [isOpen, editData, mahasiswaList, prodiList]);
 
   if (!isOpen) return null;
 
@@ -168,6 +168,14 @@ const ModalMasterMatkul = ({ isOpen, onClose, onSave, editData, mahasiswaList })
             <p className="text-[10px] font-medium text-slate-400 mt-2.5 italic leading-relaxed">Untuk Kelas Kelompok, jurusan terisi otomatis dari anggota kelas yang dipilih.</p>
           </div>
 
+          <div>
+            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Prodi *</label>
+            <select required className="w-full bg-slate-50 border border-slate-200/60 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-sm font-bold text-slate-800 cursor-pointer" value={formData.prodi_id} onChange={e => setFormData({...formData, prodi_id: e.target.value})}>
+              <option value="">Pilih Prodi</option>
+              {prodiList?.filter(prodi => prodi.aktif || String(prodi.id) === String(formData.prodi_id)).map(prodi => <option key={prodi.id} value={prodi.id}>{prodi.nama_prodi}</option>)}
+            </select>
+          </div>
+
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-slate-100 mt-6">
             <button type="button" onClick={onClose} className="px-6 py-3.5 sm:py-3.5 rounded-2xl font-bold bg-slate-100 text-slate-600 text-sm w-full sm:w-auto hover:bg-slate-200 active:scale-95 transition-all">Batal</button>
             <button type="submit" className="px-6 py-3.5 sm:py-3.5 rounded-2xl font-bold bg-blue-600 text-white text-sm w-full sm:w-auto flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-95 transition-all"><CheckCircle2 size={18} strokeWidth={2.5}/> Simpan Data</button>
@@ -181,8 +189,8 @@ const ModalMasterMatkul = ({ isOpen, onClose, onSave, editData, mahasiswaList })
 // ==========================================
 // 2. KOMPONEN MODAL: PLOTTING MATKUL
 // ==========================================
-const ModalAssignMatkul = ({ isOpen, onClose, onSave, mkData, dosenList, kelasList, mahasiswaList }) => {
-  const [formData, setFormData] = useState({ dosen_id: '', kelas_id: '', jurusan: '', jenis_kelas: 'kelompok', peserta: [] });
+const ModalAssignMatkul = ({ isOpen, onClose, onSave, mkData, dosenList, kelasList, mahasiswaList, prodiList }) => {
+  const [formData, setFormData] = useState({ dosen_id: '', kelas_id: '', jurusan: '', prodi_id: '', jenis_kelas: 'kelompok', peserta: [] });
   const [filterJurusan, setFilterJurusan] = useState('');
   const [searchMhs, setSearchMhs] = useState('');
 
@@ -195,7 +203,7 @@ const ModalAssignMatkul = ({ isOpen, onClose, onSave, mkData, dosenList, kelasLi
 
   useEffect(() => {
     if (!isOpen) { setSearchMhs(''); setFilterJurusan(''); return; }
-    setFormData({ dosen_id: mkData?.dosen_id || '', kelas_id: mkData?.kelas_id || '', jurusan: mkData?.jurusan || '', jenis_kelas: mkData?.jenis_kelas === 'kelompok' ? 'kelompok' : 'paket', peserta: [] });
+    setFormData({ dosen_id: mkData?.dosen_id || '', kelas_id: mkData?.kelas_id || '', jurusan: mkData?.jurusan || '', prodi_id: mkData?.prodi_id || '', jenis_kelas: mkData?.jenis_kelas === 'kelompok' ? 'kelompok' : 'paket', peserta: [] });
 
     if (mkData?.jenis_kelas === 'lintas') {
       axiosClient.get(`/matkul/${mkData.id}/peserta`)
@@ -238,6 +246,11 @@ const ModalAssignMatkul = ({ isOpen, onClose, onSave, mkData, dosenList, kelasLi
           <div className="relative z-20">
             <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Dosen Pengampu</label>
             <SearchableSelect options={dosenOptions} value={formData.dosen_id} onChange={(id) => setFormData({...formData, dosen_id: id})} placeholder="-- Cari dan Pilih Dosen --" />
+          </div>
+
+          <div className="relative z-20">
+            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 block mb-2">Prodi</label>
+            <SearchableSelect options={prodiList.filter(prodi => prodi.aktif).map(prodi => ({ id: prodi.id, label: prodi.nama_prodi }))} value={formData.prodi_id} onChange={(id) => setFormData({...formData, prodi_id: id})} placeholder="-- Pilih Prodi --" />
           </div>
 
           <div className="relative z-10">
@@ -485,6 +498,7 @@ const DataMatkul = () => {
   const [dosenList, setDosenList] = useState([]);
   const [kelasList, setKelasList] = useState([]);
   const [mahasiswaList, setMahasiswaList] = useState([]);
+  const [prodiList, setProdiList] = useState([]);
   
   const [search, setSearch] = useState('');
   const [filterSemester, setFilterSemester] = useState(''); 
@@ -500,13 +514,14 @@ const DataMatkul = () => {
 
   const fetchData = async () => {
     try {
-      const [rMatkul, rDosen, rKelas, rMhs] = await Promise.all([
+      const [rMatkul, rDosen, rKelas, rMhs, rProdi] = await Promise.all([
         axiosClient.get(`/matkul`).then(r => r.data).catch(()=>({data:[]})),
         axiosClient.get(`/dosen`).then(r => r.data).catch(()=>({data:[]})),
         axiosClient.get(`/kelas`).then(r => r.data).catch(()=>({data:[]})),
-        axiosClient.get(`/mahasiswa`).then(r => r.data).catch(()=>({data:[]}))
+        axiosClient.get(`/mahasiswa`).then(r => r.data).catch(()=>({data:[]})),
+        axiosClient.get(`/prodi`).then(r => r.data).catch(()=>({data:[]}))
       ]);
-      setMatkulList(rMatkul.data || []); setDosenList(rDosen.data || []); setKelasList(rKelas.data || []); setMahasiswaList(rMhs.data || []);
+      setMatkulList(rMatkul.data || []); setDosenList(rDosen.data || []); setKelasList(rKelas.data || []); setMahasiswaList(rMhs.data || []); setProdiList(rProdi.data || []);
     } catch (e) {}
   };
 
@@ -564,6 +579,7 @@ const DataMatkul = () => {
         { header: 'Nama Mata Kuliah', accessor: 'nama_mk', className: 'font-normal', tdClassName: 'font-medium text-slate-800' },
         { header: 'Semester', className: 'font-normal', render: m => <span className="text-sm text-slate-600">{m.semester || 'Ganjil'}</span> },
         { header: 'SKS', accessor: 'sks', className: 'font-normal', tdClassName: 'font-medium text-slate-500 text-center text-sm' },
+        { header: 'PRODI', className: 'font-normal', render: m => <span className="text-sm font-semibold text-blue-600">{m.nama_prodi || '-'}</span> },
         { header: 'KELOMPOK / JURUSAN', className: 'font-normal', render: m => getDisplayBadge(m) },
         { header: 'Aksi',
       className: 'text-center',
@@ -650,8 +666,8 @@ const DataMatkul = () => {
         />
       </div>
 
-      <ModalMasterMatkul isOpen={isMasterOpen} onClose={()=>setMasterOpen(false)} onSave={saveMaster} editData={selectedMatkul} mahasiswaList={mahasiswaList} />
-      <ModalAssignMatkul isOpen={isAssignOpen} onClose={()=>setAssignOpen(false)} onSave={saveAssign} mkData={selectedMatkul} dosenList={dosenList} kelasList={kelasList} mahasiswaList={mahasiswaList} />
+      <ModalMasterMatkul isOpen={isMasterOpen} onClose={()=>setMasterOpen(false)} onSave={saveMaster} editData={selectedMatkul} mahasiswaList={mahasiswaList} prodiList={prodiList} />
+      <ModalAssignMatkul isOpen={isAssignOpen} onClose={()=>setAssignOpen(false)} onSave={saveAssign} mkData={selectedMatkul} dosenList={dosenList} kelasList={kelasList} mahasiswaList={mahasiswaList} prodiList={prodiList} />
       <ModalLihatPeserta isOpen={isPesertaOpen} onClose={()=>setPesertaOpen(false)} mkData={selectedMatkul} onRefresh={fetchData} />
       <ModalCSVMatkul isOpen={isCsvOpen} onClose={()=>setCsvOpen(false)} onSuccess={()=>{fetchData(); showToast("CSV diimpor!", "success");}} />
     </div>

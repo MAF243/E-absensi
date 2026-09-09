@@ -57,6 +57,7 @@ const jadwalRoutes = require('./routes/jadwalRoutes');
 const absensiRoutes = require('./routes/absensiRoutes');
 const rekapRoutes = require('./routes/rekapRoutes');
 const periodeRoutes = require('./routes/periodeRoutes');
+const prodiRoutes = require('./routes/prodiRoutes');
 const jadwalService = require('./services/jadwalService');
 
 // ==========================================
@@ -105,6 +106,7 @@ app.use('/api/jadwal', jadwalRoutes);
 app.use('/api/absensi', absensiRoutes);
 app.use('/api/rekap', rekapRoutes);
 app.use('/api/periode', periodeRoutes);
+app.use('/api/prodi', prodiRoutes);
 
 // Background work belongs to the application entry point, not a request
 // controller. This lets controllers remain side-effect free and testable.

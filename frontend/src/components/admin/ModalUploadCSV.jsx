@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, UploadCloud, Download, CheckCircle2, AlertCircle, FileText, Info } from 'lucide-react';
 import axiosClient from '../../utils/axiosClient';
 
-const ModalUploadCSV = ({ isOpen, onClose, onSuccess, angkatanList }) => {
+const ModalUploadCSV = ({ isOpen, onClose, onSuccess, angkatanList, prodiList }) => {
   const [csvData, setCsvData] = useState([]);
   const [fileName, setFileName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -13,9 +13,9 @@ const ModalUploadCSV = ({ isOpen, onClose, onSuccess, angkatanList }) => {
 
   // 1. FUNGSI DOWNLOAD TEMPLATE
   const downloadTemplate = () => {
-    const headers = "nim;nama;jk;jurusan;angkatan;status;password\n";
-    const sample1 = "221102001;Andi Budiman;L;Informatika;Informatika 5;aktif;rahasia123\n";
-    const sample2 = "221102002;Siti Aminah;P;Informatika;Informatika 6;aktif;mahasiswa123\n";
+    const headers = "nim;nama;jk;jurusan;prodi;angkatan;status;password\n";
+    const sample1 = "221102001;Andi Budiman;L;Teknik;Informatika;Informatika 5;aktif;rahasia123\n";
+    const sample2 = "221102002;Siti Aminah;P;Teknik;Informatika;Informatika 6;aktif;mahasiswa123\n";
     
     const blob = new Blob([headers + sample1 + sample2], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -78,6 +78,7 @@ const ModalUploadCSV = ({ isOpen, onClose, onSuccess, angkatanList }) => {
           nama_lengkap: rawRow.nama,
           jenis_kelamin: rawRow.jk || 'L',
           jurusan: rawRow.jurusan || '',
+          prodi_id: prodiList?.find((prodi) => prodi.nama_prodi.toLowerCase() === String(rawRow.prodi || '').toLowerCase())?.id || prodiList?.find((prodi) => prodi.aktif)?.id || null,
           angkatan_id: matchedAngkatanId,
           status_akademik: rawRow.status || 'aktif',
           password: rawRow.password || rawRow.nim 
